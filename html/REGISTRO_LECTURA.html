@@ -4,10 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Lectura de Expedientes Judiciales</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="../css/tailwind.css">
     <link rel="stylesheet" href="../css/registro_lectura.css">
 </head>
 <body class="bg-gray-50 p-4 sm:p-8 font-sans">
+
+    <div id="statusLiveRegion" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="alertLiveRegion" class="sr-only" role="alert" aria-live="assertive" aria-atomic="true"></div>
+
+    <!-- SPINNER MODAL DE PROGRESO -->
+    <div id="loadingModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex flex-col items-center">
+                <!-- Spinner animado -->
+                <div class="mb-4">
+                    <div class="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600"></div>
+                </div>
+                <!-- Título -->
+                <h3 id="loadingTitle" class="text-lg font-bold text-gray-800 mb-2">Procesando...</h3>
+                <!-- Mensaje de progreso -->
+                <p id="loadingMessage" class="text-sm text-gray-600 text-center" aria-live="polite" aria-atomic="true">Por favor espera</p>
+                <!-- Barra de progreso -->
+                <div class="w-full bg-gray-200 rounded-full h-2 mt-4 overflow-hidden">
+                    <div id="progressBar" class="bg-blue-600 h-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="print-content" class="print-area" style="display: none;">
         <div class="header-print">
@@ -55,7 +78,7 @@
                         <th style="width: 20%;">Número de Expediente</th>
                         <th style="width: 20%;">Responsable</th>
                         <th style="width: 20%;">Fecha y Hora</th>
-                        <th style="width: 25%;">Obervacion</th>
+                        <th style="width: 25%;">Observación</th>
                         <th style="width: 10%;">Firma</th>
                     </tr>
                 </thead>
@@ -72,7 +95,7 @@
                         <td>2</td>
                         <td id="print-exp-2"></td>
                         <td></td>
-                        <td><span class="fecha-hora-line-format">_____/_____/_____ ___:___:___</span></td>
+                        <td><span class="fecha-hora-line-format">_____/_____/_____ ___:___</span></td>
                         <td></td>
                         <td></td>
                     </tr>
@@ -86,7 +109,7 @@
 
     </div>
 
-    <form id="registroForm" action="https://script.google.com/macros/s/AKfycbyBWRh9RciPTjqUxv-A8AzkwwWd_Jv3FJ9Zn9BDoCN_-5Lh64T1iYmAVg87Yjmtkrre/exec">
+    <form id="registroForm" action="https://script.google.com/macros/s/AKfycbyBWRh9RciPTjqUxv-A8AzkwwWd_Jv3FJ9Zn9BDoCN_-5Lh64T1iYmAVg87Yjmtkrre/exec" aria-busy="false">
         <div class="container max-w-7xl mx-auto bg-white p-6 shadow-2xl rounded-xl">
             <div class="flex items-center mb-6 pb-3 border-b-4 border-blue-700">
                 <img id="logoWeb" src="../logo.png" alt="Logo Poder Judicial" class="h-16 mr-4 pr-4 border-r-2 border-gray-300">
@@ -96,25 +119,29 @@
             <div class="border border-gray-300 p-5 mb-6 rounded-lg">
                 <div class="bg-blue-600 text-white px-4 py-2 rounded-md font-bold text-lg mb-4 inline-block shadow-md">👤 Datos del Usuario/Parte</div>
                 <input type="hidden" id="codigo_lectura" name="Codigo_Lectura">
+                <input type="hidden" id="nombre" name="Nombre">
                 
                 <div class="flex items-center mb-4">
-                    <label for="nombre" class="font-bold text-gray-700 w-48 flex-shrink-0">Apellidos y Nombres:</label>
-                    <input type="text" id="nombre" name="Nombre" placeholder="Ej: PEREZ GARCIA JUAN" required 
-                           class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md" 
-                           oninput="filtrarSoloLetras(this)">
+                    <label for="apellidos" class="font-bold text-gray-700 w-48 flex-shrink-0">Apellidos:</label>
+                    <input type="text" id="apellidos" placeholder="Ej: PEREZ GARCIA" required
+                           class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md">
+                </div>
+                <div class="flex items-center mb-4">
+                    <label for="nombres" class="font-bold text-gray-700 w-48 flex-shrink-0">Nombres:</label>
+                    <input type="text" id="nombres" placeholder="Ej: JUAN CARLOS" required
+                           class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md">
                 </div>
                 <div class="flex items-center mb-4">
                     <label for="dni" class="font-bold text-gray-700 w-48 flex-shrink-0">Número de DNI:</label>
                     <input type="text" id="dni" name="DNI" placeholder="Ingrese 8 dígitos. Ej: 12345678" pattern="[0-9]{8}" title="Debe ser 8 dígitos numéricos" required
-                           inputmode="numeric" maxlength="8" oninput="filtrarSoloNumeros(this, 8)"
+                           inputmode="numeric" maxlength="8"
                            class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md">
                 </div>
                  <div class="flex items-center mb-4">
                     <label for="expediente" class="font-bold text-gray-700 w-48 flex-shrink-0">Número de Expediente:</label>
                     <div class="flex flex-col w-full"> 
                         <input type="text" id="expediente" name="Expediente" placeholder="Ej: 00659-2025-0-3101-JR-CI-01" required 
-                               class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md" 
-                               oninput="this.value = this.value.toUpperCase(); syncExpediente(); mostrarEjemploExpediente()">
+                               class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md">
                         
                         <span id="expediente-guia" class="text-sm text-gray-500 mt-1 hidden">
                             **Ejemplo de formato:** 00659-2025-0-3101-JR-CI-01
@@ -147,7 +174,7 @@
 
                 <div class="flex items-center mb-4">
                     <label for="parteProcesal" class="font-bold text-gray-700 w-48 flex-shrink-0">Rol Procesal:</label>
-                    <select id="parteProcesal" name="Rol_Procesal" required onchange="manejarOtroRol()"
+                    <select id="parteProcesal" name="Rol_Procesal" required
                              class="w-full p-2 border border-gray-300 rounded-md bg-white focus:border-blue-500 focus:shadow-md">
                         <option value="">-- Seleccione un Rol --</option>
                         <option value="Demandante">Demandante</option>
@@ -163,7 +190,7 @@
                 
                 <div class="flex items-center mb-4" id="otroRolGroup" style="display: none;">
                     <label for="otroRol" class="font-bold text-gray-700 w-48 flex-shrink-0">Especificar Rol:</label>
-                    <input type="text" id="otroRol" name="Otro_Rol_Especificar" placeholder="Ej: Curador Procesal" oninput="this.value = this.value.toUpperCase()"
+                    <input type="text" id="otroRol" name="Otro_Rol_Especificar" placeholder="Ej: Curador Procesal"
                            class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md">
                 </div>
             </div>
@@ -175,8 +202,7 @@
                         <span class="mr-2">📋</span> Control de Ingreso y Salida del Expediente
                     </div>
                     <button id="editButton" type="button" 
-                        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-150 transform hover:scale-105" 
-                        onclick="toggleEditResponsable()">
+                        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-150 transform hover:scale-105">
                         Editar Responsable
                     </button>
                 </div>
@@ -189,14 +215,14 @@
                                 <th class="w-1/6">Número de Expediente</th>
                                 <th class="w-1/6">Responsable</th>
                                 <th class="w-1/6">Fecha y Hora</th>
-                                <th class="w-2/6">Observacion</th>
+                                <th class="w-2/6">Observación</th>
                                 <th class="w-1/6">Firma</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td>1</td>
-                                <td><input type="text" id="exp-control-1" placeholder="Se llena automáticamente o escriba aquí"></td>
+                                <td><input type="text" id="exp-control-1" placeholder="Se llena automáticamente" readonly aria-label="Expediente de control 1"></td>
                                 <td id="responsable-1">LUIS SANCHEZ SEGURA</td>
                                 <td><input type="datetime-local" id="fecha-control-1"></td>
                                 <td><textarea rows="2" placeholder="Nombre de la persona que entrega el expediente"></textarea></td>
@@ -204,7 +230,7 @@
                             </tr>
                             <tr>
                                 <td>2</td>
-                                <td><input type="text" id="exp-control-2" placeholder="Se llena automáticamente o escriba aquí"></td>
+                                <td><input type="text" id="exp-control-2" placeholder="Se llena automáticamente" readonly aria-label="Expediente de control 2"></td>
                                 <td></td>
                                 <td><input type="datetime-local"></td>
                                 <td><textarea rows="2" placeholder="Nombre de la persona que entrega el expediente"></textarea></td>
@@ -229,462 +255,13 @@
             <div id="registro-fecha-hora" class="text-right text-gray-600 font-bold mt-6 pt-3 border-t border-gray-300 hidden"></div>
 
             <div class="print-button-container text-center mt-10 flex justify-center space-x-6">
-                <button type="button" class="clear-button bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center gap-2" onclick="limpiarCampos()">🧹 Limpiar Datos o Nuevo Registro</button>
-                <button type="button" id="registerPrintButton" class="print-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center gap-2" onclick="enviarEImprimir()">🖨️ Imprimir y Registrar Datos</button>
-                <button type="button" id="reprintButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 items-center gap-2 hidden" onclick="reimprimirCargo()">🖨️ Reimprimir Cargo</button>
-                <a href="BUSQUEDA_LECTURA.html" target="_blank" rel="noopener noreferrer" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 inline-flex items-center gap-2">🔎 Búsqueda de Lectura</a>
+                <button type="button" id="clearButton" class="clear-button bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center gap-2">🧹 Limpiar Datos o Nuevo Registro</button>
+                <button type="submit" id="registerPrintButton" class="print-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center gap-2">🖨️ Imprimir y Registrar Datos</button>
+                <button type="button" id="reprintButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 items-center gap-2 hidden">🖨️ Reimprimir Cargo</button>
+                <a id="searchLink" href="/404.html" target="_blank" rel="noopener noreferrer" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 inline-flex items-center gap-2">🔎 Búsqueda de Lectura</a>
             </div>
         </div>
     </form>
-    
-    <script>
-    // URL de tu Google Apps Script
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyBWRh9RciPTjqUxv-A8AzkwwWd_Jv3FJ9Zn9BDoCN_-5Lh64T1iYmAVg87Yjmtkrre/exec';
-    const PRINT_REGISTER_TEXT = '🖨️ Imprimir y Registrar Datos';
-
-    let ultimoRegistroImpreso = null;
-    let ultimaFirmaRegistrada = '';
-
-    function actualizarEstadoReimpresion(disponible) {
-        const reprintButton = document.getElementById('reprintButton');
-        const registerButton = document.getElementById('registerPrintButton');
-        if (!reprintButton || !registerButton) return;
-
-        if (disponible) {
-            registerButton.classList.add('hidden');
-            reprintButton.classList.remove('hidden');
-            reprintButton.classList.add('inline-flex');
-        } else {
-            registerButton.classList.remove('hidden');
-            reprintButton.classList.add('hidden');
-            reprintButton.classList.remove('inline-flex');
-        }
-    }
-
-    function filtrarSoloNumeros(input, maxLength) {
-        let limpio = input.value.replace(/\D/g, '');
-        if (typeof maxLength === 'number') {
-            limpio = limpio.slice(0, maxLength);
-        }
-        input.value = limpio;
-    }
-
-    function filtrarSoloLetras(input) {
-        const enMayusculas = input.value.toUpperCase();
-        input.value = enMayusculas.replace(/[^A-ZÁÉÍÓÚÜÑ\s]/g, '');
-    }
-
-    function obtenerFirmaFormularioActual() {
-        const getValue = (id) => {
-            const element = document.getElementById(id);
-            return element ? element.value.trim().toUpperCase() : '';
-        };
-
-        const responsable = document.getElementById('responsable-1')
-            ? document.getElementById('responsable-1').textContent.trim().toUpperCase()
-            : '';
-
-        return [
-            getValue('nombre'),
-            getValue('dni'),
-            getValue('expediente'),
-            getValue('juzgado'),
-            getValue('especialista'),
-            getValue('parteProcesal'),
-            getValue('otroRol'),
-            getValue('exp-control-1'),
-            getValue('exp-control-2'),
-            responsable
-        ].join('|');
-    }
-
-    function invalidarRegistroSiHuboCambios() {
-        if (!ultimaFirmaRegistrada) return;
-
-        const firmaActual = obtenerFirmaFormularioActual();
-        if (firmaActual !== ultimaFirmaRegistrada) {
-            ultimoRegistroImpreso = null;
-            ultimaFirmaRegistrada = '';
-
-            document.getElementById('codigo_lectura').value = '';
-            document.getElementById('print-codigo').textContent = '';
-            document.getElementById('registro-fecha-hora').style.display = 'none';
-            document.getElementById('registro-fecha-hora-print').innerHTML = '';
-
-            actualizarEstadoReimpresion(false);
-        }
-    }
-
-    function reimprimirCargo() {
-        const firmaActual = obtenerFirmaFormularioActual();
-        if (!ultimoRegistroImpreso || !document.getElementById('codigo_lectura').value.trim()) {
-            alert('Primero debe registrar un cargo para poder reimprimir.');
-            return;
-        }
-
-        if (firmaActual !== ultimaFirmaRegistrada) {
-            alert('Se detectaron cambios en el formulario. Vuelva a registrar para generar un nuevo cargo.');
-            return;
-        }
-
-        poblarVistaImpresion(ultimoRegistroImpreso);
-        window.print();
-    }
-
-    function poblarVistaImpresion(data) {
-        document.getElementById('print-codigo').textContent = data.codigo;
-        document.getElementById('print-nombre').textContent = data.nombre;
-        document.getElementById('print-dni').textContent = data.dni;
-        document.getElementById('print-expediente').textContent = data.expediente;
-        document.getElementById('print-juzgado').textContent = data.juzgado;
-        document.getElementById('print-especialista').textContent = data.especialista;
-        document.getElementById('print-rol').textContent = data.rolProcesal;
-
-        if (data.mostrarOtroRol) {
-            document.getElementById('print-otro-rol-group').style.display = 'flex';
-            document.getElementById('print-otro-rol').textContent = data.otroRol;
-        } else {
-            document.getElementById('print-otro-rol-group').style.display = 'none';
-            document.getElementById('print-otro-rol').textContent = '';
-        }
-
-        document.getElementById('registro-fecha-hora').innerHTML = data.registroTexto;
-        document.getElementById('registro-fecha-hora').style.display = 'block';
-        document.getElementById('registro-fecha-hora-print').innerHTML = data.registroTexto;
-
-        document.getElementById('print-exp-1').textContent = data.expediente;
-        document.getElementById('print-resp-1').textContent = data.responsable;
-        document.getElementById('print-fecha-1').textContent = data.fechaControlImpresion;
-        document.getElementById('print-exp-2').textContent = data.expediente;
-    }
-
-    /**
-     * @description Sincroniza el número de expediente del formulario principal con la tabla de control (FILAS 1 Y 2).
-     */
-    function syncExpediente() {
-        const expValue = document.getElementById('expediente').value.toUpperCase();
-        
-        const expControl1 = document.getElementById('exp-control-1');
-        if (expControl1) {
-            expControl1.value = expValue;
-        }
-        
-        const expControl2 = document.getElementById('exp-control-2');
-        if (expControl2) {
-            expControl2.value = expValue;
-        }
-    }
-
-    /**
-     * @description Controla la visibilidad del placeholder y la guía de formato persistente.
-     */
-    function mostrarEjemploExpediente() {
-        const inputField = document.getElementById('expediente');
-        const exampleGuide = document.getElementById('expediente-guia');
-        const placeholderText = 'Ej: 00659-2025-0-3101-JR-CI-01'; // Definir el texto del placeholder
-
-        if (inputField.value.length > 0) {
-            // Si hay texto: Oculta el placeholder original y muestra la guía de abajo
-            inputField.placeholder = '';
-            exampleGuide.classList.remove('hidden');
-        } else {
-            // Si no hay texto: Muestra el placeholder original y oculta la guía de abajo
-            inputField.placeholder = placeholderText; // Restablecer el placeholder
-            exampleGuide.classList.add('hidden');
-        }
-    }
-
-    /**
-     * @description Muestra/Oculta el campo de texto para especificar 'Otro' rol procesal.
-     */
-    function manejarOtroRol() {
-        const parteProcesal = document.getElementById('parteProcesal').value;
-        const otroRolGroup = document.getElementById('otroRolGroup');
-        const otroRolInput = document.getElementById('otroRol');
-
-        if (parteProcesal === 'Otro') {
-            otroRolGroup.style.display = 'flex'; // Mostrar el campo
-            otroRolInput.setAttribute('required', 'required'); // Hacerlo obligatorio
-        } else {
-            otroRolGroup.style.display = 'none'; // Ocultar el campo
-            otroRolInput.removeAttribute('required'); // No obligatorio
-            otroRolInput.value = ''; // Limpiar su valor
-        }
-    }
-
-    /**
-     * @description Alterna la celda del responsable (ID: responsable-1) entre texto estático y un campo de entrada (input).
-     */
-    function toggleEditResponsable() {
-        const tdElement = document.getElementById('responsable-1');
-        const editButton = document.getElementById('editButton');
-
-        if (tdElement.querySelector('input')) {
-            // Estado actual: Editando (tiene input). Acción: Guardar texto.
-            const inputElement = tdElement.querySelector('input');
-            const newName = inputElement.value.trim().toUpperCase() || 'RESPONSABLE NO DEFINIDO'; // Convertir a MAYÚSCULAS
-            
-            // 1. Guardar el texto de vuelta en el TD
-            tdElement.textContent = newName;
-            
-            // 2. Actualizar el botón a "Editar"
-            editButton.textContent = 'Editar Responsable';
-            editButton.classList.remove('bg-green-600', 'hover:bg-green-700');
-            editButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
-
-        } else {
-            // Estado actual: Visualizando (tiene texto). Acción: Mostrar campo de edición.
-            const currentName = tdElement.textContent.trim();
-            
-            // 1. Crear el elemento input
-            const inputElement = document.createElement('input');
-            inputElement.type = 'text';
-            inputElement.value = currentName;
-            inputElement.placeholder = 'Nombre del Responsable';
-            // === Forzar Mayúsculas al escribir ===
-            inputElement.oninput = function() {
-                this.value = this.value.toUpperCase();
-            };
-            
-            // Aplicar estilos mínimos para la visualización dentro de la celda
-            inputElement.style.width = '100%';
-            inputElement.style.padding = '0.25rem 0.5rem';
-            inputElement.style.textAlign = 'center';
-            
-            // 2. Reemplazar el contenido del TD con el input
-            tdElement.innerHTML = '';
-            tdElement.appendChild(inputElement);
-            
-            // 3. Enfocar el input para empezar a escribir
-            inputElement.focus();
-
-            // 4. Actualizar el botón a "Guardar"
-            editButton.textContent = 'Guardar Responsable';
-            editButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
-            editButton.classList.add('bg-green-600', 'hover:bg-green-700');
-        }
-    }
-
-    function limpiarCampos() {
-        document.getElementById('registroForm').reset();
-        document.getElementById('registro-fecha-hora').style.display = 'none';
-        document.getElementById('registro-fecha-hora-print').innerHTML = '';
-
-        ultimoRegistroImpreso = null;
-        ultimaFirmaRegistrada = '';
-        actualizarEstadoReimpresion(false);
-        
-        // Limpiar campos y secciones adicionales
-        document.getElementById('otroRolGroup').style.display = 'none';
-        document.getElementById('print-otro-rol-group').style.display = 'none';
-        
-        // Limpiar el código de atención 
-        document.getElementById('codigo_lectura').value = ''; 
-        document.getElementById('print-codigo').textContent = ''; 
-        
-        document.getElementById('especialista').selectedIndex = 0; 
-        
-        // Resetear la edición del responsable
-        const tdResponsable = document.getElementById('responsable-1');
-        if (tdResponsable) {
-            tdResponsable.textContent = 'LUIS SANCHEZ SEGURA'; // Resetear a Mayúsculas
-            const editButton = document.getElementById('editButton');
-            editButton.textContent = 'Editar Responsable';
-            editButton.classList.remove('bg-green-600', 'hover:bg-green-700');
-            editButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
-        }
-        
-        // Limpiar fecha y expediente de control
-        const fechaControl1 = document.getElementById('fecha-control-1');
-        if(fechaControl1) fechaControl1.value = '';
-        const expControl1 = document.getElementById('exp-control-1');
-        if(expControl1) expControl1.value = '';
-        const expControl2 = document.getElementById('exp-control-2');
-        if(expControl2) expControl2.value = '';
-
-        manejarOtroRol();
-        mostrarEjemploExpediente(); // Asegurar que el placeholder y la guía estén en el estado inicial
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        // 1. Asignar el LOGO_PATH a los elementos <img> desde la carpeta raiz.
-        document.getElementById('logoPrint').src = '../logo.png';
-        
-        const selectEspecialista = document.getElementById('especialista');
-        selectEspecialista.innerHTML = '<option value="">-- Cargando Especialistas --</option>';
-        
-        // Inicializa el manejo del rol al cargar
-        manejarOtroRol();
-        
-        // Inicializa la visibilidad del ejemplo de expediente
-        mostrarEjemploExpediente();
-        actualizarEstadoReimpresion(false);
-
-        // Si el usuario modifica datos luego de registrar, se invalida la reimpresión.
-        const form = document.getElementById('registroForm');
-        form.addEventListener('input', invalidarRegistroSiHuboCambios);
-        form.addEventListener('change', invalidarRegistroSiHuboCambios);
-
-        // 2. Cargar especialistas desde Apps Script (Debe revisar su despliegue en GAS si falla)
-        fetch(GAS_URL) 
-            .then(response => {
-                if (!response.ok) throw new Error(`Error HTTP: ${response.status}.`);
-                return response.json(); 
-            })
-            .then(data => {
-                selectEspecialista.innerHTML = '<option value="">-- Seleccione Especialista --</option>';
-                
-                if (data && data.error) {
-                    console.error("Error del Servidor GAS:", data.error);
-                    selectEspecialista.innerHTML = `<option value="">-- ERROR: ${data.error} --</option>`;
-                    return;
-                }
-                
-                if (data && Array.isArray(data)) {
-                    data.forEach(especialista => {
-                        const option = document.createElement('option');
-                        option.value = especialista;
-                        option.textContent = especialista;
-                        selectEspecialista.appendChild(option);
-                    });
-                } else {
-                    selectEspecialista.innerHTML = '<option value="">-- La lista de especialistas está vacía --</option>';
-                }
-            })
-            .catch(error => {
-                console.error('Error FATAL cargando especialistas. Revise la consola del navegador y el Log de Apps Script.', error);
-                selectEspecialista.innerHTML = '<option value="">-- ERROR AL CARGAR LISTA (Ver consola) --</option>';
-            });
-    });
-
-    /**
-     * @description Envía los datos al Apps Script, espera el código generado por GAS, 
-     * y luego procede con la impresión.
-     */
-    async function enviarEImprimir() {
-        const form = document.getElementById('registroForm');
-        if (!form.checkValidity()) {
-            console.error("Por favor, rellena todos los campos obligatorios antes de imprimir y registrar.");
-            form.reportValidity();
-            return;
-        }
-
-        const firmaActual = obtenerFirmaFormularioActual();
-        const codigoGuardado = document.getElementById('codigo_lectura').value.trim();
-
-        // Si ya existe registro y no hubo cambios, no crear duplicado y dirigir a reimpresión.
-        if (codigoGuardado && ultimoRegistroImpreso && firmaActual === ultimaFirmaRegistrada) {
-            alert('Este registro ya fue guardado. Use el botón "Reimprimir Cargo".');
-            return;
-        }
-
-        const printButton = document.querySelector('.print-button');
-        const originalText = printButton.innerHTML;
-        printButton.innerHTML = "⌛ Registrando datos y generando código...";
-        printButton.style.backgroundColor = '#ffc107'; 
-
-        // === PASO 1: SINCRONIZACIÓN DE FECHA/HORA DE LA TABLA (FILA 1) ===
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const dateTimeLocalString = `${year}-${month}-${day}T${hours}:${minutes}`;
-
-        const fechaControl1 = document.getElementById('fecha-control-1');
-        if (fechaControl1) {
-            fechaControl1.value = dateTimeLocalString; // Se registra en el input de la tabla
-        }
-        
-        // Preparación del formato para la impresión final
-        const fechaImpresion = now.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/');
-        const horaImpresion = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-
-        const formData = new FormData(form);
-        
-        // Obtener datos de la tabla de control
-        const responsableEditable = document.getElementById('responsable-1').textContent.trim();
-        const expControlValue = document.getElementById('expediente').value;
-        
-        formData.append('Responsable_Control', responsableEditable);
-        formData.append('Fecha_Control_1', fechaControl1 ? fechaControl1.value : '');
-        
-        // C. ENVIAR DATOS A GOOGLE SHEETS Y RECIBIR EL CÓDIGO GENERADO POR GAS
-        try {
-            const response = await fetch(GAS_URL, {
-                method: 'POST',
-                body: new URLSearchParams(formData) 
-            });
-
-            if (!response.ok) throw new Error(`Error en la respuesta del servidor: ${response.status}`);
-            
-            const result = await response.json();
-
-            if (result.error || result.result === 'error') {
-                 console.error("Error al registrar en Google Sheets:", result.error || result.message);
-                 alert(`Error al registrar. Consulte la consola. Mensaje: ${result.error || result.message}`);
-                 throw new Error(result.error || result.message);
-            }
-
-            // ASIGNAR CÓDIGO DE LECTURA RECIBIDO DE GAS
-            const codigo = result.codigo_lectura || 'ERROR'; 
-            document.getElementById('codigo_lectura').value = codigo; 
-            document.getElementById('print-codigo').textContent = codigo; 
-
-            // PREPARAR FECHA Y HORA DEL REGISTRO PRINCIPAL
-            const fechaRegistro = now.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
-            const horaRegistro = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const registroTexto = `Registrado el: <strong>${fechaRegistro}</strong> a las <strong>${horaRegistro}</strong> hrs.`;
-
-            // A. PREPARAR PANTALLA WEB
-            document.getElementById('registro-fecha-hora').innerHTML = registroTexto;
-            document.getElementById('registro-fecha-hora').style.display = 'block';
-            document.getElementById('registro-fecha-hora-print').innerHTML = registroTexto;
-
-            // Obtener valores necesarios del formulario
-            const getSelectText = (id) => document.getElementById(id).options[document.getElementById(id).selectedIndex].text;
-            const otroRolValue = document.getElementById('otroRol').value;
-            const rolProcesalBase = getSelectText('parteProcesal'); 
-
-              const mostrarOtroRol = document.getElementById('parteProcesal').value === 'Otro' && !!otroRolValue;
-
-              ultimoRegistroImpreso = {
-                 codigo,
-                 nombre: document.getElementById('nombre').value,
-                 dni: document.getElementById('dni').value,
-                 expediente: expControlValue,
-                 juzgado: getSelectText('juzgado'),
-                 especialista: getSelectText('especialista'),
-                 rolProcesal: rolProcesalBase,
-                 mostrarOtroRol,
-                 otroRol: otroRolValue,
-                 responsable: responsableEditable,
-                 fechaControlImpresion: `${fechaImpresion} ${horaImpresion}`,
-                 registroTexto
-              };
-
-              poblarVistaImpresion(ultimoRegistroImpreso);
-              ultimaFirmaRegistrada = firmaActual;
-            actualizarEstadoReimpresion(true);
-
-
-            // D. INICIAR IMPRESIÓN
-            window.print();
-            
-        } catch (error) {
-            alert("Ocurrió un error grave al registrar los datos. Por favor, revise la consola para más detalles.");
-            console.error("Error en la función enviarEImprimir:", error);
-        } finally {
-            // Revertir el estado del botón después de la impresión/error
-            printButton.innerHTML = originalText;
-            printButton.style.backgroundColor = ''; // Restablecer el color de fondo
-            
-            // Asegurar que el input de fecha no se mantenga visible en la web
-            if (fechaControl1) fechaControl1.value = '';
-        }
-    }
-    </script>
+    <script src="../js/registro_lectura.js"></script>
 </body>
 </html>

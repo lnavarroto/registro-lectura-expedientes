@@ -1,0 +1,25 @@
+{
+  "name": "registro-lectura-expedientes",
+  "version": "1.0.0",
+  "description": "",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "build:css": "tailwindcss -i ./css/tailwind-input.css -o ./css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./css/tailwind-input.css -o ./css/tailwind.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lnavarroto/registro-lectura-expedientes.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lnavarroto/registro-lectura-expedientes/issues"
+  },
+  "homepage": "https://github.com/lnavarroto/registro-lectura-expedientes#readme",
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

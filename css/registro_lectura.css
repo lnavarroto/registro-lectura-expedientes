@@ -3,15 +3,15 @@ html { font-family: sans-serif; }
 
 .modern-table { border-collapse: collapse; }
 .modern-table th, .modern-table td {
-    border: 1px solid theme('colors.gray.300');
+    border: 1px solid #d1d5db;
     padding: 0.75rem 0.5rem;
     text-align: center;
 }
 
 .modern-table thead th {
-    background-color: theme('colors.blue.50');
+    background-color: #eff6ff;
     font-weight: 700;
-    color: theme('colors.gray.800');
+    color: #1f2937;
     text-transform: uppercase;
     font-size: 0.875rem;
 }
@@ -34,8 +34,24 @@ html { font-family: sans-serif; }
     resize: vertical;
 }
 
+#exp-control-1,
+#exp-control-2 {
+    font-family: Consolas, "Courier New", monospace;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    font-size: 0.92rem;
+    text-align: left;
+    padding-left: 0.25rem;
+}
+
+/* Da mas espacio visual a la columna de expediente en vista web (PC). */
+.modern-table th:nth-child(2),
+.modern-table td:nth-child(2) {
+    min-width: 220px;
+}
+
 .table-container { overflow-x: auto; }
-.modern-table { min-width: 900px; }
+.modern-table { min-width: 1050px; }
 
 /* ESTILOS DE IMPRESION OPTIMIZADOS */
 @media print {
