@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Lectura de Expedientes Judiciales</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* CONFIGURACIÓN DE FUENTE Y ESTILOS BASE UNIFICADOS */
+        html { font-family: sans-serif; } 
+        
+        .modern-table { border-collapse: collapse; }
+        .modern-table th, .modern-table td {
+            border: 1px solid theme('colors.gray.300');
+            padding: 0.75rem 0.5rem; 
+            text-align: center;
+        }
+
+        .modern-table thead th {
+            background-color: theme('colors.blue.50');
+            font-weight: 700;
+            color: theme('colors.gray.800');
+            text-transform: uppercase;
+            font-size: 0.875rem; 
+        }
+
+        .modern-table input[type="text"], 
+        .modern-table input[type="datetime-local"],
+        .modern-table textarea {
+            width: 100%;
+            border: none !important;
+            padding: 0.25rem 0.5rem;
+            background-color: transparent;
+            font-size: 1rem;
+            box-shadow: none;
+            text-align: center;
+            min-height: 50px;
+        }
+        .modern-table textarea {
+            text-align: left;
+            resize: vertical;
+        }
+        .table-container { overflow-x: auto; }
+        .modern-table { min-width: 900px; }
+
+        /* ============================== */
+        /* ESTILOS DE IMPRESIÓN OPTIMIZADOS */
+        /* ============================== */
+        @media print {
+            .container, .print-button-container, .signature-section-web { display: none !important; }
+
+            @page { size: A4 portrait; margin: 0.5cm !important; }
+
+            body {
+                background: #fff !important;
+                color: #000 !important;
+                font-family: "Times New Roman", serif !important;
+                font-size: 11.5pt !important;
+                line-height: 1.2;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+
+            .print-area { display: block !important; width: auto; padding: 1cm !important; box-sizing: border-box; }
+
+            .header-print { display: flex !important; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 15px; }
+            .header-print img { height: 65px; }
+            
+            .header-print h1 { font-size: 1.1em; text-align: right; color: #000; font-weight: bold; line-height: 1.1; margin-top: 0; }
+            .section-title-print { font-size: 1.05em; font-weight: bold; color: #000; background-color: #f2f2f2; border: 1px solid #999; padding: 4px 8px; border-radius: 3px; margin-top: 12px; margin-bottom: 10px; }
+            .form-group-print { display: flex; align-items: flex-start; margin-bottom: 8px; font-size: 11pt; }
+            .form-group-print label { font-weight: bold; width: 220px; color: #111; flex-shrink: 0; }
+            .form-value-print { flex-grow: 1; padding-left: 6px; min-height: 1.3em; border-bottom: 1px solid #444; }
+
+            .modern-table-print { width: 100%; border-collapse: collapse; table-layout: fixed; }
+            .modern-table-print th, .modern-table-print td { border: 1px solid #000; padding: 4px 8px; text-align: center; font-size: 10pt; }
+            .modern-table-print thead th { background-color: #e0e0e0; font-weight: bold; color: #000; text-transform: uppercase; }
+            .modern-table-print tbody td { height: 35px; }
+            .fecha-hora-line-format { font-size: 8pt; font-weight: bold; }
+
+            .signature-section-print { display: flex !important; justify-content: space-between; margin-top: 35px; gap: 40px; }
+            .signature-box-print { width: 45%; text-align: center; }
+            .signature-box-print .placeholder { width: 180px; height: 90px; border: 1px solid #000; margin: 0 auto 8px auto; background: none; }
+            .signature-box-print p { border-top: 1px solid #000; font-size: 10.5pt; padding-top: 4px; margin-top: 3px; }
+            
+            .entrega-nota-print {
+                text-align: center;
+                font-size: 11pt;
+                color: #000;
+                font-weight: bold;
+                margin-top: 30px;
+                padding-top: 10px;
+                border-top: 1px dashed #999;
+            }
+            
+            #print-otro-rol-group { display: none !important; }
+            #registro-fecha-hora-print { display: block !important; text-align: right; font-size: 10pt; color: #000; margin-top: 15px; font-style: italic; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-4 sm:p-8 font-sans">
+
+    <div id="print-content" class="print-area" style="display: none;">
+        <div class="header-print">
+            <img id="logoPrint" src="logo.png" alt="Logo Poder Judicial">
+            <h1>CORTE SUPERIOR DE JUSTICIA DE SULLANA<br>REGISTRO DE LECTURA DE EXPEDIENTES</h1>
+        </div>
+        
+        <div class="section-title-print">👤 DATOS DEL USUARIO/PARTE</div>
+        <div class="form-group-print"><label>Código de Atención:</label><span id="print-codigo" class="form-value-print"></span></div>
+        <div class="form-group-print"><label>Nombre Completo:</label><span id="print-nombre" class="form-value-print"></span></div>
+        <div class="form-group-print"><label>Número de DNI:</label><span id="print-dni" class="form-value-print"></span></div>
+        <div class="form-group-print"><label>Número de Expediente:</label><span id="print-expediente" class="form-value-print"></span></div>
+        
+        <div class="section-title-print">🏛️ INFORMACIÓN PROCESAL</div>
+        <div class="form-group-print"><label>Juzgado/Sala:</label><span id="print-juzgado" class="form-value-print"></span></div>
+        <div class="form-group-print"><label>Especialista:</label><span id="print-especialista" class="form-value-print"></span></div>
+        
+        <div class="form-group-print"><label>Rol Procesal:</label><span id="print-rol" class="form-value-print"></span></div>
+        
+        <div id="print-otro-rol-group" class="form-group-print"><label>Especificar Rol:</label><span id="print-otro-rol" class="form-value-print"></span></div>
+        
+        <div class="signature-section-print">
+            <div class="signature-box-print">
+                <div class="placeholder"></div>
+                <p>Huella Digital</p>
+            </div>
+            <div class="signature-box-print">
+                <div class="placeholder"></div>
+                <p>Firma del Usuario</p>
+            </div>
+        </div>
+
+        <div id="registro-fecha-hora-print"></div>
+
+        <p class="entrega-nota-print">
+            **Yo, el usuario(a) identificado(a), declaro bajo juramento haber solicitado y revisado el expediente mencionado**
+        </p>
+
+        <div class="section-title-print" style="margin-top: 20px;">📋 CONTROL DE INGRESO Y SALIDA DEL EXPEDIENTE</div>
+        <div class="table-container-print">
+            <table class="modern-table-print">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">N°</th>
+                        <th style="width: 20%;">Número de Expediente</th>
+                        <th style="width: 20%;">Responsable</th>
+                        <th style="width: 20%;">Fecha y Hora</th>
+                        <th style="width: 25%;">Obervacion</th>
+                        <th style="width: 10%;">Firma</th>
+                    </tr>
+                </thead>
+                <tbody id="print-control-body">
+                    <tr>
+                        <td>1</td>
+                        <td id="print-exp-1"></td>
+                        <td id="print-resp-1"></td>
+                        <td id="print-fecha-1"></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td id="print-exp-2"></td>
+                        <td></td>
+                        <td><span class="fecha-hora-line-format">_____/_____/_____ ___:___:___</span></td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p class="entrega-nota-print">
+            **Desarrollado por LUIS NAVARRO TORRES.**
+        </p>
+
+    </div>
+
+    <form id="registroForm" action="https://script.google.com/macros/s/AKfycbyBWRh9RciPTjqUxv-A8AzkwwWd_Jv3FJ9Zn9BDoCN_-5Lh64T1iYmAVg87Yjmtkrre/exec">
+        <div class="container max-w-7xl mx-auto bg-white p-6 shadow-2xl rounded-xl">
+            <div class="flex items-center mb-6 pb-3 border-b-4 border-blue-700">
+                <img id="logoWeb" src="logo.png" alt="Logo Poder Judicial" class="h-16 mr-4 pr-4 border-r-2 border-gray-300">
+                <h1 class="text-3xl text-blue-900 font-extrabold flex-grow text-left">Registro de Lectura de Expedientes</h1>
+            </div>
+
+            <div class="border border-gray-300 p-5 mb-6 rounded-lg">
+                <div class="bg-blue-600 text-white px-4 py-2 rounded-md font-bold text-lg mb-4 inline-block shadow-md">👤 Datos del Usuario/Parte</div>
+                <input type="hidden" id="codigo_lectura" name="Codigo_Lectura">
+                
+                <div class="flex items-center mb-4">
+                    <label for="nombre" class="font-bold text-gray-700 w-48 flex-shrink-0">Apellidos y Nombres:</label>
+                    <input type="text" id="nombre" name="Nombre" placeholder="Ej: PEREZ GARCIA JUAN" required 
+                           class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md" 
+                           oninput="filtrarSoloLetras(this)">
+                </div>
+                <div class="flex items-center mb-4">
+                    <label for="dni" class="font-bold text-gray-700 w-48 flex-shrink-0">Número de DNI:</label>
+                    <input type="text" id="dni" name="DNI" placeholder="Ingrese 8 dígitos. Ej: 12345678" pattern="[0-9]{8}" title="Debe ser 8 dígitos numéricos" required
+                           inputmode="numeric" maxlength="8" oninput="filtrarSoloNumeros(this, 8)"
+                           class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md">
+                </div>
+                 <div class="flex items-center mb-4">
+                    <label for="expediente" class="font-bold text-gray-700 w-48 flex-shrink-0">Número de Expediente:</label>
+                    <div class="flex flex-col w-full"> 
+                        <input type="text" id="expediente" name="Expediente" placeholder="Ej: 00659-2025-0-3101-JR-CI-01" required 
+                               class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md" 
+                               oninput="this.value = this.value.toUpperCase(); syncExpediente(); mostrarEjemploExpediente()">
+                        
+                        <span id="expediente-guia" class="text-sm text-gray-500 mt-1 hidden">
+                            **Ejemplo de formato:** 00659-2025-0-3101-JR-CI-01
+                        </span>
+                    </div>
+                </div>
+                 </div>
+            <div class="border border-gray-300 p-5 mb-6 rounded-lg">
+                <div class="bg-blue-600 text-white px-4 py-2 rounded-md font-bold text-lg mb-4 inline-block shadow-md">🏛️ Información Procesal</div>
+                
+                <div class="flex items-center mb-4">
+                    <label for="juzgado" class="font-bold text-gray-700 w-48 flex-shrink-0">Juzgado/Sala:</label>
+                    <select id="juzgado" name="Juzgado" required
+                             class="w-full p-2 border border-gray-300 rounded-md bg-white focus:border-blue-500 focus:shadow-md">
+                        <option value="">-- Seleccione un Juzgado --</option>
+                        <option value="Primer Juzgado Civil Sullana">Primer Juzgado Civil de Sullana</option>
+                        <option value="Segundo Juzgado Civil Sullana">Segundo Juzgado Civil de Sullana</option>
+                        <option value="Juzgado Civil Transitorio Sullana">Juzgado Civil Transitorio de Sullana</option>
+                        <option value="Sala Civil Sullana">Sala Civil de Sullana</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center mb-4">
+                    <label for="especialista" class="font-bold text-gray-700 w-48 flex-shrink-0">Especialista:</label>
+                    <select id="especialista" name="Especialista" required
+                             class="w-full p-2 border border-gray-300 rounded-md bg-white focus:border-blue-500 focus:shadow-md">
+                        <option value="">-- Cargando Especialistas --</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center mb-4">
+                    <label for="parteProcesal" class="font-bold text-gray-700 w-48 flex-shrink-0">Rol Procesal:</label>
+                    <select id="parteProcesal" name="Rol_Procesal" required onchange="manejarOtroRol()"
+                             class="w-full p-2 border border-gray-300 rounded-md bg-white focus:border-blue-500 focus:shadow-md">
+                        <option value="">-- Seleccione un Rol --</option>
+                        <option value="Demandante">Demandante</option>
+                        <option value="Demandado">Demandado</option>
+                        <option value="Tercero Interviniente">Tercero Interviniente</option>
+                        <option value="Abogado Demandante">Abogado Demandante</option>
+                        <option value="Abogado Demandado">Abogado Demandado</option>
+                        <option value="Fiscal">Fiscal</option>
+                        <option value="Perito">Perito</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                
+                <div class="flex items-center mb-4" id="otroRolGroup" style="display: none;">
+                    <label for="otroRol" class="font-bold text-gray-700 w-48 flex-shrink-0">Especificar Rol:</label>
+                    <input type="text" id="otroRol" name="Otro_Rol_Especificar" placeholder="Ej: Curador Procesal" oninput="this.value = this.value.toUpperCase()"
+                           class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md">
+                </div>
+            </div>
+            
+            <div class="border border-gray-300 p-5 mb-6 rounded-lg">
+                
+                <div class="flex justify-between items-center mb-6">
+                    <div class="text-2xl font-extrabold text-blue-700 px-3 py-1 bg-white rounded-lg shadow-md border-b-4 border-blue-400">
+                        <span class="mr-2">📋</span> Control de Ingreso y Salida del Expediente
+                    </div>
+                    <button id="editButton" type="button" 
+                        class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-150 transform hover:scale-105" 
+                        onclick="toggleEditResponsable()">
+                        Editar Responsable
+                    </button>
+                </div>
+                
+                <div class="table-container w-full"> 
+                    <table class="modern-table w-full border border-gray-300 rounded-lg overflow-hidden">
+                        <thead>
+                            <tr>
+                                <th class="w-10">N°</th>
+                                <th class="w-1/6">Número de Expediente</th>
+                                <th class="w-1/6">Responsable</th>
+                                <th class="w-1/6">Fecha y Hora</th>
+                                <th class="w-2/6">Observacion</th>
+                                <th class="w-1/6">Firma</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td><input type="text" id="exp-control-1" placeholder="Se llena automáticamente o escriba aquí"></td>
+                                <td id="responsable-1">LUIS NAVARRO TORRES</td>
+                                <td><input type="datetime-local" id="fecha-control-1"></td>
+                                <td><textarea rows="2" placeholder="Nombre de la persona que entrega el expediente"></textarea></td>
+                                <td class="min-w-[120px] h-[70px]"></td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td><input type="text" id="exp-control-2" placeholder="Se llena automáticamente o escriba aquí"></td>
+                                <td></td>
+                                <td><input type="datetime-local"></td>
+                                <td><textarea rows="2" placeholder="Nombre de la persona que entrega el expediente"></textarea></td>
+                                <td class="min-w-[120px] h-[70px]"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="signature-section-web flex justify-around items-end mt-10 pt-5 border-t-2 border-dashed border-gray-400">
+                <div class="w-2/5 text-center">
+                    <div class="w-4/5 h-32 border-2 border-dashed border-gray-500 mx-auto mb-3 flex items-center justify-center text-gray-500 text-sm bg-gray-50">Espacio para Huella</div>
+                    <p class="mt-2 pt-2 border-t-2 border-gray-800 font-bold text-gray-800 w-4/5 mx-auto">Huella Digital</p>
+                </div>
+                <div class="w-2/5 text-center">
+                    <div class="w-4/5 h-32 border-2 border-dashed border-gray-500 mx-auto mb-3 flex items-center justify-center text-gray-500 text-sm bg-gray-50"></div>
+                    <p class="mt-2 pt-2 border-t-2 border-gray-800 font-bold text-gray-800 w-4/5 mx-auto">Firma del Usuario</p>
+                </div>
+            </div>
+
+            <div id="registro-fecha-hora" class="text-right text-gray-600 font-bold mt-6 pt-3 border-t border-gray-300 hidden"></div>
+
+            <div class="print-button-container text-center mt-10 flex justify-center space-x-6">
+                <button type="button" class="clear-button bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center gap-2" onclick="limpiarCampos()">🧹 Limpiar Datos o Nuevo Registro</button>
+                <button type="button" id="registerPrintButton" class="print-button bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 flex items-center gap-2" onclick="enviarEImprimir()">🖨️ Imprimir y Registrar Datos</button>
+                <button type="button" id="reprintButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 items-center gap-2 hidden" onclick="reimprimirCargo()">🖨️ Reimprimir Cargo</button>
+                <a href="BUSQUEDA_LECTURA.html" target="_blank" rel="noopener noreferrer" class="bg-slate-700 hover:bg-slate-800 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-300 inline-flex items-center gap-2">🔎 Búsqueda de Lectura</a>
+            </div>
+        </div>
+    </form>
+    
+    <script>
+    // URL de tu Google Apps Script
+    const GAS_URL = 'https://script.google.com/macros/s/AKfycbyBWRh9RciPTjqUxv-A8AzkwwWd_Jv3FJ9Zn9BDoCN_-5Lh64T1iYmAVg87Yjmtkrre/exec';
+    const PRINT_REGISTER_TEXT = '🖨️ Imprimir y Registrar Datos';
+
+    let ultimoRegistroImpreso = null;
+    let ultimaFirmaRegistrada = '';
+
+    function actualizarEstadoReimpresion(disponible) {
+        const reprintButton = document.getElementById('reprintButton');
+        const registerButton = document.getElementById('registerPrintButton');
+        if (!reprintButton || !registerButton) return;
+
+        if (disponible) {
+            registerButton.classList.add('hidden');
+            reprintButton.classList.remove('hidden');
+            reprintButton.classList.add('inline-flex');
+        } else {
+            registerButton.classList.remove('hidden');
+            reprintButton.classList.add('hidden');
+            reprintButton.classList.remove('inline-flex');
+        }
+    }
+
+    function filtrarSoloNumeros(input, maxLength) {
+        let limpio = input.value.replace(/\D/g, '');
+        if (typeof maxLength === 'number') {
+            limpio = limpio.slice(0, maxLength);
+        }
+        input.value = limpio;
+    }
+
+    function filtrarSoloLetras(input) {
+        const enMayusculas = input.value.toUpperCase();
+        input.value = enMayusculas.replace(/[^A-ZÁÉÍÓÚÜÑ\s]/g, '');
+    }
+
+    function obtenerFirmaFormularioActual() {
+        const getValue = (id) => {
+            const element = document.getElementById(id);
+            return element ? element.value.trim().toUpperCase() : '';
+        };
+
+        const responsable = document.getElementById('responsable-1')
+            ? document.getElementById('responsable-1').textContent.trim().toUpperCase()
+            : '';
+
+        return [
+            getValue('nombre'),
+            getValue('dni'),
+            getValue('expediente'),
+            getValue('juzgado'),
+            getValue('especialista'),
+            getValue('parteProcesal'),
+            getValue('otroRol'),
+            getValue('exp-control-1'),
+            getValue('exp-control-2'),
+            responsable
+        ].join('|');
+    }
+
+    function invalidarRegistroSiHuboCambios() {
+        if (!ultimaFirmaRegistrada) return;
+
+        const firmaActual = obtenerFirmaFormularioActual();
+        if (firmaActual !== ultimaFirmaRegistrada) {
+            ultimoRegistroImpreso = null;
+            ultimaFirmaRegistrada = '';
+
+            document.getElementById('codigo_lectura').value = '';
+            document.getElementById('print-codigo').textContent = '';
+            document.getElementById('registro-fecha-hora').style.display = 'none';
+            document.getElementById('registro-fecha-hora-print').innerHTML = '';
+
+            actualizarEstadoReimpresion(false);
+        }
+    }
+
+    function reimprimirCargo() {
+        const firmaActual = obtenerFirmaFormularioActual();
+        if (!ultimoRegistroImpreso || !document.getElementById('codigo_lectura').value.trim()) {
+            alert('Primero debe registrar un cargo para poder reimprimir.');
+            return;
+        }
+
+        if (firmaActual !== ultimaFirmaRegistrada) {
+            alert('Se detectaron cambios en el formulario. Vuelva a registrar para generar un nuevo cargo.');
+            return;
+        }
+
+        poblarVistaImpresion(ultimoRegistroImpreso);
+        window.print();
+    }
+
+    function poblarVistaImpresion(data) {
+        document.getElementById('print-codigo').textContent = data.codigo;
+        document.getElementById('print-nombre').textContent = data.nombre;
+        document.getElementById('print-dni').textContent = data.dni;
+        document.getElementById('print-expediente').textContent = data.expediente;
+        document.getElementById('print-juzgado').textContent = data.juzgado;
+        document.getElementById('print-especialista').textContent = data.especialista;
+        document.getElementById('print-rol').textContent = data.rolProcesal;
+
+        if (data.mostrarOtroRol) {
+            document.getElementById('print-otro-rol-group').style.display = 'flex';
+            document.getElementById('print-otro-rol').textContent = data.otroRol;
+        } else {
+            document.getElementById('print-otro-rol-group').style.display = 'none';
+            document.getElementById('print-otro-rol').textContent = '';
+        }
+
+        document.getElementById('registro-fecha-hora').innerHTML = data.registroTexto;
+        document.getElementById('registro-fecha-hora').style.display = 'block';
+        document.getElementById('registro-fecha-hora-print').innerHTML = data.registroTexto;
+
+        document.getElementById('print-exp-1').textContent = data.expediente;
+        document.getElementById('print-resp-1').textContent = data.responsable;
+        document.getElementById('print-fecha-1').textContent = data.fechaControlImpresion;
+        document.getElementById('print-exp-2').textContent = data.expediente;
+    }
+
+    /**
+     * @description Sincroniza el número de expediente del formulario principal con la tabla de control (FILAS 1 Y 2).
+     */
+    function syncExpediente() {
+        const expValue = document.getElementById('expediente').value.toUpperCase();
+        
+        const expControl1 = document.getElementById('exp-control-1');
+        if (expControl1) {
+            expControl1.value = expValue;
+        }
+        
+        const expControl2 = document.getElementById('exp-control-2');
+        if (expControl2) {
+            expControl2.value = expValue;
+        }
+    }
+
+    /**
+     * @description Controla la visibilidad del placeholder y la guía de formato persistente.
+     */
+    function mostrarEjemploExpediente() {
+        const inputField = document.getElementById('expediente');
+        const exampleGuide = document.getElementById('expediente-guia');
+        const placeholderText = 'Ej: 00659-2025-0-3101-JR-CI-01'; // Definir el texto del placeholder
+
+        if (inputField.value.length > 0) {
+            // Si hay texto: Oculta el placeholder original y muestra la guía de abajo
+            inputField.placeholder = '';
+            exampleGuide.classList.remove('hidden');
+        } else {
+            // Si no hay texto: Muestra el placeholder original y oculta la guía de abajo
+            inputField.placeholder = placeholderText; // Restablecer el placeholder
+            exampleGuide.classList.add('hidden');
+        }
+    }
+
+    /**
+     * @description Muestra/Oculta el campo de texto para especificar 'Otro' rol procesal.
+     */
+    function manejarOtroRol() {
+        const parteProcesal = document.getElementById('parteProcesal').value;
+        const otroRolGroup = document.getElementById('otroRolGroup');
+        const otroRolInput = document.getElementById('otroRol');
+
+        if (parteProcesal === 'Otro') {
+            otroRolGroup.style.display = 'flex'; // Mostrar el campo
+            otroRolInput.setAttribute('required', 'required'); // Hacerlo obligatorio
+        } else {
+            otroRolGroup.style.display = 'none'; // Ocultar el campo
+            otroRolInput.removeAttribute('required'); // No obligatorio
+            otroRolInput.value = ''; // Limpiar su valor
+        }
+    }
+
+    /**
+     * @description Alterna la celda del responsable (ID: responsable-1) entre texto estático y un campo de entrada (input).
+     */
+    function toggleEditResponsable() {
+        const tdElement = document.getElementById('responsable-1');
+        const editButton = document.getElementById('editButton');
+
+        if (tdElement.querySelector('input')) {
+            // Estado actual: Editando (tiene input). Acción: Guardar texto.
+            const inputElement = tdElement.querySelector('input');
+            const newName = inputElement.value.trim().toUpperCase() || 'RESPONSABLE NO DEFINIDO'; // Convertir a MAYÚSCULAS
+            
+            // 1. Guardar el texto de vuelta en el TD
+            tdElement.textContent = newName;
+            
+            // 2. Actualizar el botón a "Editar"
+            editButton.textContent = 'Editar Responsable';
+            editButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+            editButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+
+        } else {
+            // Estado actual: Visualizando (tiene texto). Acción: Mostrar campo de edición.
+            const currentName = tdElement.textContent.trim();
+            
+            // 1. Crear el elemento input
+            const inputElement = document.createElement('input');
+            inputElement.type = 'text';
+            inputElement.value = currentName;
+            inputElement.placeholder = 'Nombre del Responsable';
+            // === Forzar Mayúsculas al escribir ===
+            inputElement.oninput = function() {
+                this.value = this.value.toUpperCase();
+            };
+            
+            // Aplicar estilos mínimos para la visualización dentro de la celda
+            inputElement.style.width = '100%';
+            inputElement.style.padding = '0.25rem 0.5rem';
+            inputElement.style.textAlign = 'center';
+            
+            // 2. Reemplazar el contenido del TD con el input
+            tdElement.innerHTML = '';
+            tdElement.appendChild(inputElement);
+            
+            // 3. Enfocar el input para empezar a escribir
+            inputElement.focus();
+
+            // 4. Actualizar el botón a "Guardar"
+            editButton.textContent = 'Guardar Responsable';
+            editButton.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            editButton.classList.add('bg-green-600', 'hover:bg-green-700');
+        }
+    }
+
+    function limpiarCampos() {
+        document.getElementById('registroForm').reset();
+        document.getElementById('registro-fecha-hora').style.display = 'none';
+        document.getElementById('registro-fecha-hora-print').innerHTML = '';
+
+        ultimoRegistroImpreso = null;
+        ultimaFirmaRegistrada = '';
+        actualizarEstadoReimpresion(false);
+        
+        // Limpiar campos y secciones adicionales
+        document.getElementById('otroRolGroup').style.display = 'none';
+        document.getElementById('print-otro-rol-group').style.display = 'none';
+        
+        // Limpiar el código de atención 
+        document.getElementById('codigo_lectura').value = ''; 
+        document.getElementById('print-codigo').textContent = ''; 
+        
+        document.getElementById('especialista').selectedIndex = 0; 
+        
+        // Resetear la edición del responsable
+        const tdResponsable = document.getElementById('responsable-1');
+        if (tdResponsable) {
+            tdResponsable.textContent = 'LUIS NAVARRO TORRES'; // Resetear a Mayúsculas
+            const editButton = document.getElementById('editButton');
+            editButton.textContent = 'Editar Responsable';
+            editButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+            editButton.classList.add('bg-blue-500', 'hover:bg-blue-600');
+        }
+        
+        // Limpiar fecha y expediente de control
+        const fechaControl1 = document.getElementById('fecha-control-1');
+        if(fechaControl1) fechaControl1.value = '';
+        const expControl1 = document.getElementById('exp-control-1');
+        if(expControl1) expControl1.value = '';
+        const expControl2 = document.getElementById('exp-control-2');
+        if(expControl2) expControl2.value = '';
+
+        manejarOtroRol();
+        mostrarEjemploExpediente(); // Asegurar que el placeholder y la guía estén en el estado inicial
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // 1. Asignar el LOGO_PATH a los elementos <img> (USANDO RUTA DIRECTA)
+        // Se asume que 'logo.png' está en la misma carpeta que este archivo HTML.
+        document.getElementById('logoPrint').src = 'logo.png';
+        
+        const selectEspecialista = document.getElementById('especialista');
+        selectEspecialista.innerHTML = '<option value="">-- Cargando Especialistas --</option>';
+        
+        // Inicializa el manejo del rol al cargar
+        manejarOtroRol();
+        
+        // Inicializa la visibilidad del ejemplo de expediente
+        mostrarEjemploExpediente();
+        actualizarEstadoReimpresion(false);
+
+        // Si el usuario modifica datos luego de registrar, se invalida la reimpresión.
+        const form = document.getElementById('registroForm');
+        form.addEventListener('input', invalidarRegistroSiHuboCambios);
+        form.addEventListener('change', invalidarRegistroSiHuboCambios);
+
+        // 2. Cargar especialistas desde Apps Script (Debe revisar su despliegue en GAS si falla)
+        fetch(GAS_URL) 
+            .then(response => {
+                if (!response.ok) throw new Error(`Error HTTP: ${response.status}.`);
+                return response.json(); 
+            })
+            .then(data => {
+                selectEspecialista.innerHTML = '<option value="">-- Seleccione Especialista --</option>';
+                
+                if (data && data.error) {
+                    console.error("Error del Servidor GAS:", data.error);
+                    selectEspecialista.innerHTML = `<option value="">-- ERROR: ${data.error} --</option>`;
+                    return;
+                }
+                
+                if (data && Array.isArray(data)) {
+                    data.forEach(especialista => {
+                        const option = document.createElement('option');
+                        option.value = especialista;
+                        option.textContent = especialista;
+                        selectEspecialista.appendChild(option);
+                    });
+                } else {
+                    selectEspecialista.innerHTML = '<option value="">-- La lista de especialistas está vacía --</option>';
+                }
+            })
+            .catch(error => {
+                console.error('Error FATAL cargando especialistas. Revise la consola del navegador y el Log de Apps Script.', error);
+                selectEspecialista.innerHTML = '<option value="">-- ERROR AL CARGAR LISTA (Ver consola) --</option>';
+            });
+    });
+
+    /**
+     * @description Envía los datos al Apps Script, espera el código generado por GAS, 
+     * y luego procede con la impresión.
+     */
+    async function enviarEImprimir() {
+        const form = document.getElementById('registroForm');
+        if (!form.checkValidity()) {
+            console.error("Por favor, rellena todos los campos obligatorios antes de imprimir y registrar.");
+            form.reportValidity();
+            return;
+        }
+
+        const firmaActual = obtenerFirmaFormularioActual();
+        const codigoGuardado = document.getElementById('codigo_lectura').value.trim();
+
+        // Si ya existe registro y no hubo cambios, no crear duplicado y dirigir a reimpresión.
+        if (codigoGuardado && ultimoRegistroImpreso && firmaActual === ultimaFirmaRegistrada) {
+            alert('Este registro ya fue guardado. Use el botón "Reimprimir Cargo".');
+            return;
+        }
+
+        const printButton = document.querySelector('.print-button');
+        const originalText = printButton.innerHTML;
+        printButton.innerHTML = "⌛ Registrando datos y generando código...";
+        printButton.style.backgroundColor = '#ffc107'; 
+
+        // === PASO 1: SINCRONIZACIÓN DE FECHA/HORA DE LA TABLA (FILA 1) ===
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const dateTimeLocalString = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+        const fechaControl1 = document.getElementById('fecha-control-1');
+        if (fechaControl1) {
+            fechaControl1.value = dateTimeLocalString; // Se registra en el input de la tabla
+        }
+        
+        // Preparación del formato para la impresión final
+        const fechaImpresion = now.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '/');
+        const horaImpresion = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+
+        const formData = new FormData(form);
+        
+        // Obtener datos de la tabla de control
+        const responsableEditable = document.getElementById('responsable-1').textContent.trim();
+        const expControlValue = document.getElementById('expediente').value;
+        
+        formData.append('Responsable_Control', responsableEditable);
+        formData.append('Fecha_Control_1', fechaControl1 ? fechaControl1.value : '');
+        
+        // C. ENVIAR DATOS A GOOGLE SHEETS Y RECIBIR EL CÓDIGO GENERADO POR GAS
+        try {
+            const response = await fetch(GAS_URL, {
+                method: 'POST',
+                body: new URLSearchParams(formData) 
+            });
+
+            if (!response.ok) throw new Error(`Error en la respuesta del servidor: ${response.status}`);
+            
+            const result = await response.json();
+
+            if (result.error || result.result === 'error') {
+                 console.error("Error al registrar en Google Sheets:", result.error || result.message);
+                 alert(`Error al registrar. Consulte la consola. Mensaje: ${result.error || result.message}`);
+                 throw new Error(result.error || result.message);
+            }
+
+            // ASIGNAR CÓDIGO DE LECTURA RECIBIDO DE GAS
+            const codigo = result.codigo_lectura || 'ERROR'; 
+            document.getElementById('codigo_lectura').value = codigo; 
+            document.getElementById('print-codigo').textContent = codigo; 
+
+            // PREPARAR FECHA Y HORA DEL REGISTRO PRINCIPAL
+            const fechaRegistro = now.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+            const horaRegistro = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const registroTexto = `Registrado el: <strong>${fechaRegistro}</strong> a las <strong>${horaRegistro}</strong> hrs.`;
+
+            // A. PREPARAR PANTALLA WEB
+            document.getElementById('registro-fecha-hora').innerHTML = registroTexto;
+            document.getElementById('registro-fecha-hora').style.display = 'block';
+            document.getElementById('registro-fecha-hora-print').innerHTML = registroTexto;
+
+            // Obtener valores necesarios del formulario
+            const getSelectText = (id) => document.getElementById(id).options[document.getElementById(id).selectedIndex].text;
+            const otroRolValue = document.getElementById('otroRol').value;
+            const rolProcesalBase = getSelectText('parteProcesal'); 
+
+              const mostrarOtroRol = document.getElementById('parteProcesal').value === 'Otro' && !!otroRolValue;
+
+              ultimoRegistroImpreso = {
+                 codigo,
+                 nombre: document.getElementById('nombre').value,
+                 dni: document.getElementById('dni').value,
+                 expediente: expControlValue,
+                 juzgado: getSelectText('juzgado'),
+                 especialista: getSelectText('especialista'),
+                 rolProcesal: rolProcesalBase,
+                 mostrarOtroRol,
+                 otroRol: otroRolValue,
+                 responsable: responsableEditable,
+                 fechaControlImpresion: `${fechaImpresion} ${horaImpresion}`,
+                 registroTexto
+              };
+
+              poblarVistaImpresion(ultimoRegistroImpreso);
+              ultimaFirmaRegistrada = firmaActual;
+            actualizarEstadoReimpresion(true);
+
+
+            // D. INICIAR IMPRESIÓN
+            window.print();
+            
+        } catch (error) {
+            alert("Ocurrió un error grave al registrar los datos. Por favor, revise la consola para más detalles.");
+            console.error("Error en la función enviarEImprimir:", error);
+        } finally {
+            // Revertir el estado del botón después de la impresión/error
+            printButton.innerHTML = originalText;
+            printButton.style.backgroundColor = ''; // Restablecer el color de fondo
+            
+            // Asegurar que el input de fecha no se mantenga visible en la web
+            if (fechaControl1) fechaControl1.value = '';
+        }
+    }
+    </script>
+</body>
+</html>
