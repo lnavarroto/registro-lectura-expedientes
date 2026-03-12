@@ -106,3 +106,65 @@ html { font-family: sans-serif; }
     #print-otro-rol-group { display: none !important; }
     #registro-fecha-hora-print { display: block !important; text-align: right; font-size: 10pt; color: #000; margin-top: 15px; font-style: italic; }
 }
+
+/* ===== ESTILOS MEJORADOS PARA BLOQUE DE EXPEDIENTES ===== */
+
+.expediente-block {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+    border-left: 6px solid #0284c7 !important;
+    border-radius: 12px !important;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+}
+
+.expediente-block:hover {
+    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.25);
+    transform: translateY(-2px);
+}
+
+.expediente-block input,
+.expediente-block select {
+    transition: all 0.2s ease;
+    background-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+.expediente-block input:focus,
+.expediente-block select:focus {
+    background-color: white !important;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1) !important;
+    transform: scale(1.02);
+}
+
+.expediente-block input::placeholder {
+    color: #7dd3fc;
+    font-weight: 500;
+}
+
+/* Estilo para el checkbox de Cautelar */
+#checkCautelar {
+    cursor: pointer;
+    accent-color: #f59e0b;
+}
+
+/* Etiqueta de materia y juzgado con mejor visibilidad */
+.expediente-block label.text-xs {
+    display: block;
+    color: #006fb3;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Vista previa del expediente generado */
+#expediente-guia {
+    background: linear-gradient(90deg, #dbeafe 0%, #e0f2fe 100%);
+    border-left: 4px solid #0284c7;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+#expediente-preview {
+    color: #0c4a6e;
+    font-size: 14px;
+    letter-spacing: 1px;
+}

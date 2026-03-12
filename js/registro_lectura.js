@@ -385,7 +385,7 @@ function normalizarNumeroExpediente(valor) {
         .toString()
         .toUpperCase()
         .replace(/\s+/g, '')
-        .replace(/[^A-Z0-9-]/g, '')
+        .replace(/[^A-Z0-9\-]/g, '')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 }
@@ -503,7 +503,29 @@ function syncExpediente() {
         expControl2.value = expValue;
     }
 }
+function construirExpedienteDesdeBloques() {
 
+const numero = document.getElementById("expNumero")?.value || "";
+const anio = document.getElementById("expAnio")?.value || "";
+const cuaderno = document.getElementById("expCuaderno")?.value || "0";
+const cont = document.getElementById("expContinuacion")?.value || "";
+const materia = document.getElementById("expMateria")?.value || "";
+
+if(!numero || !anio) return;
+
+// rellena con ceros
+const numeroFormateado = numero.padStart(5,"0");
+
+const expediente =
+`${numeroFormateado}-${anio}-${cuaderno}-${cont}-${materia}-01`;
+
+document.getElementById("expediente").value = expediente;
+
+// usa tu sistema actual
+syncExpediente();
+mostrarEjemploExpediente();
+
+}
 function syncNombreCompleto() {
     const apellidos = document.getElementById('apellidos')
         ? document.getElementById('apellidos').value.trim().toUpperCase()
@@ -520,17 +542,26 @@ function syncNombreCompleto() {
 }
 
 function mostrarEjemploExpediente() {
-    const inputField = document.getElementById('expediente');
-    const exampleGuide = document.getElementById('expediente-guia');
-    const placeholderText = 'Ej: 00659-2025-0-3101-JR-CI-01';
 
-    if (inputField.value.length > 0) {
-        inputField.placeholder = '';
-        exampleGuide.classList.remove('hidden');
-    } else {
-        inputField.placeholder = placeholderText;
-        exampleGuide.classList.add('hidden');
-    }
+const inputField = document.getElementById('expediente');
+const exampleGuide = document.getElementById('expediente-guia');
+
+if(!inputField || !exampleGuide) return;
+
+const placeholderText = 'Ej: 00659-2025-0-3101-JR-CI-01';
+
+if (inputField.value.length > 0) {
+
+inputField.placeholder = '';
+exampleGuide.classList.remove('hidden');
+
+} else {
+
+inputField.placeholder = placeholderText;
+exampleGuide.classList.add('hidden');
+
+}
+
 }
 
 function validarFormularioConFoco(form) {
@@ -639,200 +670,7 @@ function limpiarCampos() {
     limpiarBorradorTemporal();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('logoPrint').src = '../logo.png';
 
-    const borradorInicial = obtenerBorradorTemporal();
-    if (borradorInicial) {
-        aplicarBorradorTemporalAlFormulario(borradorInicial);
-        console.log('📝 Borrador offline restaurado desde localStorage.');
-    }
-
-const selectEspecialista = document.getElementById('especialista');
-
-// 1️⃣ Intentar cargar desde CACHE primero
-const especialistasEnCache = obtenerEspecialistasDelCache();
-
-function llenarSelectEspecialistas(lista) {
-    selectEspecialista.innerHTML = '<option value="">-- Seleccione Especialista --</option>';
-
-    for (const especialista of lista) {
-        const option = document.createElement('option');
-        option.value = especialista;
-        option.textContent = especialista;
-        selectEspecialista.appendChild(option);
-    }
-}
-
-function normalizarRespuestaEspecialistas(data) {
-    if (Array.isArray(data)) return data;
-    if (data && Array.isArray(data.especialistas)) return data.especialistas;
-    return [];
-}
-
-if (especialistasEnCache && especialistasEnCache.length > 0) {
-
-    // 🔹 Usar CACHE inmediatamente
-    llenarSelectEspecialistas(especialistasEnCache);
-    console.log("⚡ Especialistas cargados desde CACHE");
-
-    // 🔹 Actualizar en background
-    fetch(GAS_URL + '?action=especialistas')
-    .then(r => r.json())
-    .then(data => {
-
-        const listaServidor = normalizarRespuestaEspecialistas(data);
-
-        if (
-            listaServidor.length > 0 &&
-            JSON.stringify(listaServidor) !== JSON.stringify(especialistasEnCache)
-        ) {
-            guardarEspecialistasEnCache(listaServidor);
-            console.log("🔄 Cache actualizado desde servidor");
-        }
-
-    })
-    .catch(err => {
-        console.warn("⚠️ No se pudo actualizar especialistas:", err);
-    });
-
-} else {
-
-    // 🔹 No hay cache → cargar desde servidor
-    selectEspecialista.innerHTML = '<option value="">-- Cargando Especialistas --</option>';
-
-    fetch(GAS_URL + '?action=especialistas')
-    .then(response => {
-
-        if (!response.ok) {
-            throw new Error("Error HTTP " + response.status);
-        }
-
-        return response.json();
-    })
-    .then(data => {
-
-        const lista = normalizarRespuestaEspecialistas(data);
-
-        if (lista.length === 0) {
-            throw new Error("Lista vacía");
-        }
-
-        guardarEspecialistasEnCache(lista);
-        llenarSelectEspecialistas(lista);
-
-        console.log("✅ Especialistas cargados desde servidor");
-
-    })
-    .catch(error => {
-
-        console.error("❌ Error cargando especialistas:", error);
-
-        selectEspecialista.innerHTML =
-        '<option value="">-- No se pudieron cargar especialistas --</option>';
-
-        showErrorToast(
-            "No se pudo cargar la lista de especialistas. Verifique conexión.",
-            "Error de Conexión",
-            5000
-        );
-
-    });
-
-}
-    // ===== EVENT LISTENERS PARA CAMPOS DE ENTRADA =====
-    
-    // Apellidos: filtrar solo letras y sincronizar nombre completo
-    const apellidosInput = document.getElementById('apellidos');
-    if (apellidosInput) {
-        apellidosInput.addEventListener('input', (e) => {
-            filtrarSoloLetras(e.target);
-            syncNombreCompleto();
-        });
-    }
-
-    // Nombres: filtrar solo letras y sincronizar nombre completo
-    const nombresInput = document.getElementById('nombres');
-    if (nombresInput) {
-        nombresInput.addEventListener('input', (e) => {
-            filtrarSoloLetras(e.target);
-            syncNombreCompleto();
-        });
-    }
-
-    // DNI: filtrar solo números (máximo 8)
-    const dniInput = document.getElementById('dni');
-    if (dniInput) {
-        dniInput.addEventListener('input', (e) => {
-            filtrarSoloNumeros(e.target, 8);
-        });
-    }
-
-    // Expediente: convertir a mayúsculas, sincronizar controles y mostrar guía
-    const expedienteInput = document.getElementById('expediente');
-    if (expedienteInput) {
-        expedienteInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase();
-            syncExpediente();
-            mostrarEjemploExpediente();
-        });
-    }
-
-    // Otro Rol: convertir a mayúsculas
-    const otroRolInput = document.getElementById('otroRol');
-    if (otroRolInput) {
-        otroRolInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase();
-        });
-    }
-
-    // Rol Procesal: manejar "Otro" rol
-    const parteProcesal = document.getElementById('parteProcesal');
-    if (parteProcesal) {
-        parteProcesal.addEventListener('change', () => {
-            manejarOtroRol();
-        });
-    }
-
-    // ===== EVENT LISTENERS PARA BOTONES =====
-    
-    // Botón Editar Responsable
-    const editButton = document.getElementById('editButton');
-    if (editButton) {
-        editButton.addEventListener('click', toggleEditResponsable);
-    }
-
-    // Botón Limpiar Datos
-    const clearButton = document.getElementById('clearButton');
-    if (clearButton) {
-        clearButton.addEventListener('click', limpiarCampos);
-    }
-
-    // Botón Reimprimir
-    const reprintButton = document.getElementById('reprintButton');
-    if (reprintButton) {
-        reprintButton.addEventListener('click', reimprimirCargo);
-    }
-
-    manejarOtroRol();
-
-    syncNombreCompleto();
-    mostrarEjemploExpediente();
-    actualizarEstadoReimpresion(false);
-
-    const form = document.getElementById('registroForm');
-    const guardarBorradorConDebounce = debounce(guardarBorradorTemporal, 400);
-    form.addEventListener('submit', (event) => {
-        event.preventDefault();
-        if (isSubmitting) return;
-        enviarEImprimir();
-    });
-    form.addEventListener('input', invalidarRegistroSiHuboCambios);
-    form.addEventListener('change', invalidarRegistroSiHuboCambios);
-    form.addEventListener('input', guardarBorradorConDebounce);
-    form.addEventListener('change', guardarBorradorTemporal);
-
-  }); 
 
 
 async function enviarEImprimir() {
@@ -976,3 +814,400 @@ async function enviarEImprimir() {
 
 } // ← cierra enviarEImprimir
 
+document.addEventListener('DOMContentLoaded', () => {
+
+document.getElementById('logoPrint').src = '../logo.png';
+
+const borradorInicial = obtenerBorradorTemporal();
+if (borradorInicial) {
+aplicarBorradorTemporalAlFormulario(borradorInicial);
+console.log('📝 Borrador offline restaurado desde localStorage.');
+}
+
+const selectEspecialista = document.getElementById('especialista');
+
+// CACHE ESPECIALISTAS
+const especialistasEnCache = obtenerEspecialistasDelCache();
+
+function llenarSelectEspecialistas(lista) {
+
+selectEspecialista.innerHTML = '<option value="">-- Seleccione Especialista --</option>';
+
+for (const especialista of lista) {
+
+const option = document.createElement('option');
+option.value = especialista;
+option.textContent = especialista;
+
+selectEspecialista.appendChild(option);
+
+}
+
+}
+
+function normalizarRespuestaEspecialistas(data) {
+
+if (Array.isArray(data)) return data;
+if (data && Array.isArray(data.especialistas)) return data.especialistas;
+return [];
+
+}
+
+if (especialistasEnCache && especialistasEnCache.length > 0) {
+
+llenarSelectEspecialistas(especialistasEnCache);
+console.log("⚡ Especialistas cargados desde CACHE");
+
+fetch(GAS_URL + '?action=especialistas')
+.then(r => r.json())
+.then(data => {
+
+const listaServidor = normalizarRespuestaEspecialistas(data);
+
+if (
+listaServidor.length > 0 &&
+JSON.stringify(listaServidor) !== JSON.stringify(especialistasEnCache)
+) {
+
+guardarEspecialistasEnCache(listaServidor);
+console.log("🔄 Cache actualizado desde servidor");
+
+}
+
+})
+.catch(err => {
+
+console.warn("⚠️ No se pudo actualizar especialistas:", err);
+
+});
+
+} else {
+
+selectEspecialista.innerHTML = '<option value="">-- Cargando Especialistas --</option>';
+
+fetch(GAS_URL + '?action=especialistas')
+.then(response => {
+
+if (!response.ok) throw new Error("Error HTTP " + response.status);
+
+return response.json();
+
+})
+.then(data => {
+
+const lista = normalizarRespuestaEspecialistas(data);
+
+if (lista.length === 0) throw new Error("Lista vacía");
+
+guardarEspecialistasEnCache(lista);
+
+llenarSelectEspecialistas(lista);
+
+console.log("✅ Especialistas cargados desde servidor");
+
+})
+.catch(error => {
+
+console.error("❌ Error cargando especialistas:", error);
+
+selectEspecialista.innerHTML =
+'<option value="">-- No se pudieron cargar especialistas --</option>';
+
+showErrorToast(
+"No se pudo cargar la lista de especialistas. Verifique conexión.",
+"Error de Conexión",
+5000
+);
+
+});
+
+}
+
+// FILTROS CAMPOS
+
+const apellidosInput = document.getElementById('apellidos');
+if (apellidosInput) {
+
+apellidosInput.addEventListener('input', (e) => {
+
+filtrarSoloLetras(e.target);
+syncNombreCompleto();
+
+});
+
+}
+
+const nombresInput = document.getElementById('nombres');
+if (nombresInput) {
+
+nombresInput.addEventListener('input', (e) => {
+
+filtrarSoloLetras(e.target);
+syncNombreCompleto();
+
+});
+
+}
+
+const dniInput = document.getElementById('dni');
+if (dniInput) {
+
+dniInput.addEventListener('input', (e) => {
+
+filtrarSoloNumeros(e.target, 8);
+
+});
+
+}
+
+// INPUT EXPEDIENTE ORIGINAL
+
+const expedienteInput = document.getElementById('expediente');
+if (expedienteInput) {
+
+expedienteInput.addEventListener('input', (e) => {
+
+e.target.value = e.target.value.toUpperCase();
+
+syncExpediente();
+mostrarEjemploExpediente();
+
+});
+
+}
+
+// OTRO ROL
+
+const otroRolInput = document.getElementById('otroRol');
+if (otroRolInput) {
+
+otroRolInput.addEventListener('input', (e) => {
+
+e.target.value = e.target.value.toUpperCase();
+
+});
+
+}
+
+// ROL PROCESAL
+
+const parteProcesal = document.getElementById('parteProcesal');
+if (parteProcesal) {
+
+parteProcesal.addEventListener('change', () => {
+
+manejarOtroRol();
+
+});
+
+}
+
+// BOTONES
+
+const editButton = document.getElementById('editButton');
+if (editButton) {
+
+editButton.addEventListener('click', toggleEditResponsable);
+
+}
+
+const clearButton = document.getElementById('clearButton');
+if (clearButton) {
+
+clearButton.addEventListener('click', limpiarCampos);
+
+}
+
+const reprintButton = document.getElementById('reprintButton');
+if (reprintButton) {
+
+reprintButton.addEventListener('click', reimprimirCargo);
+
+}
+
+manejarOtroRol();
+
+syncNombreCompleto();
+mostrarEjemploExpediente();
+actualizarEstadoReimpresion(false);
+
+// FORM
+
+const form = document.getElementById('registroForm');
+
+const guardarBorradorConDebounce = debounce(guardarBorradorTemporal, 400);
+
+form.addEventListener('submit', (event) => {
+
+event.preventDefault();
+
+if (isSubmitting) return;
+
+enviarEImprimir();
+
+});
+
+form.addEventListener('input', invalidarRegistroSiHuboCambios);
+form.addEventListener('change', invalidarRegistroSiHuboCambios);
+
+form.addEventListener('input', guardarBorradorConDebounce);
+form.addEventListener('change', guardarBorradorTemporal);
+
+
+
+// =========================
+// NUEVO SISTEMA EXPEDIENTE
+// =========================
+
+function construirExpedienteDesdeBloques() {
+
+const numero = document.getElementById("expNumero")?.value || "";
+const anio = document.getElementById("expAnio")?.value || "";
+const cuaderno = document.getElementById("expCuaderno")?.value || "0";
+const cont = document.getElementById("expContinuacion")?.value || "";
+const materia = document.getElementById("expMateria")?.value || "";
+
+if(!numero || !anio) return;
+
+const numeroFormateado = numero.padStart(5,"0");
+
+const expediente =
+`${numeroFormateado}-${anio}-${cuaderno}-${cont}-${materia}-01`;
+
+document.getElementById("expediente").value = expediente;
+
+// Mostrar preview del expediente generado
+const preview = document.getElementById("expediente-preview");
+if(preview) {
+preview.textContent = expediente;
+}
+
+syncExpediente();
+
+mostrarEjemploExpediente();
+
+}
+
+
+// EVENTOS BLOQUES EXPEDIENTE
+
+[
+"expNumero",
+"expAnio",
+"expCuaderno",
+"expContinuacion",
+"expMateria"
+
+].forEach(id=>{
+
+const el = document.getElementById(id);
+
+if(el){
+
+el.addEventListener("input", construirExpedienteDesdeBloques);
+el.addEventListener("change", construirExpedienteDesdeBloques);
+
+}
+
+});
+
+
+// CHECKBOX CAUTELAR
+
+const checkCautelar = document.getElementById("checkCautelar");
+
+if(checkCautelar){
+
+const campoCuaderno = document.getElementById("expCuaderno");
+
+campoCuaderno.disabled = true;
+
+campoCuaderno.value = "0";
+
+checkCautelar.addEventListener("change",function(){
+
+if(this.checked){
+
+campoCuaderno.disabled = false;
+
+campoCuaderno.value = "";
+
+}else{
+
+campoCuaderno.disabled = true;
+
+campoCuaderno.value = "0";
+
+}
+
+construirExpedienteDesdeBloques();
+
+});
+
+// VALIDACIÓN DE CUADERNO: máximo 3 dígitos (999)
+campoCuaderno.addEventListener("input", function(){
+
+filtrarSoloNumeros(this, 3);
+
+let val = parseInt(this.value) || 0;
+
+if(val > 999) this.value = 999;
+
+});
+
+}
+
+
+// LIMITE NUMERO EXPEDIENTE
+
+const expNumero = document.getElementById("expNumero");
+
+if(expNumero){
+
+expNumero.addEventListener("input",function(){
+
+filtrarSoloNumeros(this,5);
+
+});
+
+}
+
+
+// LIMITE AÑO
+
+const expAnio = document.getElementById("expAnio");
+
+if(expAnio){
+
+// Establecer año actual por defecto
+const yearActual = new Date().getFullYear();
+expAnio.value = yearActual;
+
+// Seleccionar todo el texto al enfocar para edición fácil
+expAnio.addEventListener("focus", function(){
+this.select();
+});
+
+// Validar solo cuando pierde el foco para permitir escritura libre
+expAnio.addEventListener("blur", function(){
+
+if(this.value.trim() === "") {
+this.value = yearActual;
+return;
+}
+
+let val = parseInt(this.value);
+
+if(isNaN(val) || val < 1970) this.value = 1970;
+else if(val > 2026) this.value = 2026;
+
+});
+
+// Solo permitir números mientras escribe
+expAnio.addEventListener("input",function(){
+this.value = this.value.replace(/[^0-9]/g, '');
+});
+
+}
+
+});
