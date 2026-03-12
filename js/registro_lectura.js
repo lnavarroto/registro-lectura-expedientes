@@ -4,6 +4,8 @@ const PRINT_REGISTER_TEXT = '🖨️ Imprimir y Registrar Datos';
 const ESPECIALISTAS_CACHE_KEY = 'especialistas_cache';
 const ESPECIALISTAS_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 horas en milisegundos
 const BORRADOR_REGISTRO_KEY = 'registro_lectura_borrador_v1';
+const REGISTROS_LOCAL_KEY = 'registros_lectura_local_v1';
+const REGISTROS_LOCAL_MAX = 300;
 
 let ultimoRegistroImpreso = null;
 let ultimaFirmaRegistrada = '';
@@ -237,6 +239,29 @@ function aplicarBorradorTemporalAlFormulario(borrador) {
     mostrarEjemploExpediente();
 }
 
+function guardarRegistroEnHistorialLocal(registro) {
+    if (!registro || !registro.codigo || registro.codigo === 'ERROR') return;
+
+    let historial = [];
+    try {
+        const raw = localStorage.getItem(REGISTROS_LOCAL_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        historial = Array.isArray(parsed) ? parsed : [];
+    } catch {
+        historial = [];
+    }
+
+    // Evita duplicados por codigo, conservando el mas reciente.
+    historial = historial.filter((item) => item.codigo !== registro.codigo);
+    historial.unshift(registro);
+
+    if (historial.length > REGISTROS_LOCAL_MAX) {
+        historial = historial.slice(0, REGISTROS_LOCAL_MAX);
+    }
+
+    localStorage.setItem(REGISTROS_LOCAL_KEY, JSON.stringify(historial));
+}
+
 // ===== FUNCIONES DE UTILIDAD PARA CACHEO =====
 
 /**
@@ -411,12 +436,20 @@ function reimprimirCargo() {
 
     const firmaActual = obtenerFirmaFormularioActual();
     if (!ultimoRegistroImpreso || !document.getElementById('codigo_lectura').value.trim()) {
-        alert('Primero debe registrar un cargo para poder reimprimir.');
+        showWarningToast(
+            'Debe registrar un cargo primero antes de reimprimir.',
+            'Reimpresión No Disponible',
+            4500
+        );
         return;
     }
 
     if (firmaActual !== ultimaFirmaRegistrada) {
-        alert('Se detectaron cambios en el formulario. Vuelva a registrar para generar un nuevo cargo.');
+        showErrorToast(
+            'Se detectaron cambios en el formulario. Debe registrar nuevamente para generar un nuevo cargo.',
+            'Formulario Modificado',
+            5000
+        );
         return;
     }
 
@@ -615,66 +648,98 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log('📝 Borrador offline restaurado desde localStorage.');
     }
 
-    const selectEspecialista = document.getElementById('especialista');
-    
-    // Intentar cargar especialistas del cache primero
-    const especialistasEnCache = obtenerEspecialistasDelCache();
-    
-    if (especialistasEnCache && especialistasEnCache.length > 0) {
-        // Usar el cache
-        selectEspecialista.innerHTML = '<option value="">-- Seleccione Especialista --</option>';
-        especialistasEnCache.forEach(especialista => {
-            const option = document.createElement('option');
-            option.value = especialista;
-            option.textContent = especialista;
-            selectEspecialista.appendChild(option);
-        });
-        if (borradorInicial && borradorInicial.especialista) {
-            const existe = Array.from(selectEspecialista.options).some((opt) => opt.value === borradorInicial.especialista);
-            if (existe) selectEspecialista.value = borradorInicial.especialista;
-        }
-        console.log('✅ Especialistas cargados desde CACHE');
-    } else {
-        // Si no hay cache, mostrar cargando y hacer fetch
-        selectEspecialista.innerHTML = '<option value="">-- Cargando Especialistas --</option>';
-        
-        fetch(GAS_URL)
-            .then(response => {
-                if (!response.ok) throw new Error(`Error HTTP: ${response.status}.`);
-                return response.json();
-            })
-            .then(data => {
-                selectEspecialista.innerHTML = '<option value="">-- Seleccione Especialista --</option>';
+const selectEspecialista = document.getElementById('especialista');
 
-                if (data && data.error) {
-                    console.error('Error del Servidor GAS:', data.error);
-                    selectEspecialista.innerHTML = `<option value="">-- ERROR: ${data.error} --</option>`;
-                    return;
-                }
+// 1️⃣ Intentar cargar desde CACHE primero
+const especialistasEnCache = obtenerEspecialistasDelCache();
 
-                if (data && Array.isArray(data)) {
-                    guardarEspecialistasEnCache(data);
-                    data.forEach(especialista => {
-                        const option = document.createElement('option');
-                        option.value = especialista;
-                        option.textContent = especialista;
-                        selectEspecialista.appendChild(option);
-                    });
-                    if (borradorInicial && borradorInicial.especialista) {
-                        const existe = Array.from(selectEspecialista.options).some((opt) => opt.value === borradorInicial.especialista);
-                        if (existe) selectEspecialista.value = borradorInicial.especialista;
-                    }
-                    console.log('✅ Especialistas cargados DESDE SERVIDOR y cacheados');
-                } else {
-                    selectEspecialista.innerHTML = '<option value="">-- La lista de especialistas esta vacia --</option>';
-                }
-            })
-            .catch(error => {
-                console.error('Error FATAL cargando especialistas. Revise la consola del navegador y el Log de Apps Script.', error);
-                selectEspecialista.innerHTML = '<option value="">-- ERROR AL CARGAR LISTA (Ver consola) --</option>';
-            });
+function llenarSelectEspecialistas(lista) {
+    selectEspecialista.innerHTML = '<option value="">-- Seleccione Especialista --</option>';
+
+    for (const especialista of lista) {
+        const option = document.createElement('option');
+        option.value = especialista;
+        option.textContent = especialista;
+        selectEspecialista.appendChild(option);
     }
+}
 
+function normalizarRespuestaEspecialistas(data) {
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.especialistas)) return data.especialistas;
+    return [];
+}
+
+if (especialistasEnCache && especialistasEnCache.length > 0) {
+
+    // 🔹 Usar CACHE inmediatamente
+    llenarSelectEspecialistas(especialistasEnCache);
+    console.log("⚡ Especialistas cargados desde CACHE");
+
+    // 🔹 Actualizar en background
+    fetch(GAS_URL + '?action=especialistas')
+    .then(r => r.json())
+    .then(data => {
+
+        const listaServidor = normalizarRespuestaEspecialistas(data);
+
+        if (
+            listaServidor.length > 0 &&
+            JSON.stringify(listaServidor) !== JSON.stringify(especialistasEnCache)
+        ) {
+            guardarEspecialistasEnCache(listaServidor);
+            console.log("🔄 Cache actualizado desde servidor");
+        }
+
+    })
+    .catch(err => {
+        console.warn("⚠️ No se pudo actualizar especialistas:", err);
+    });
+
+} else {
+
+    // 🔹 No hay cache → cargar desde servidor
+    selectEspecialista.innerHTML = '<option value="">-- Cargando Especialistas --</option>';
+
+    fetch(GAS_URL + '?action=especialistas')
+    .then(response => {
+
+        if (!response.ok) {
+            throw new Error("Error HTTP " + response.status);
+        }
+
+        return response.json();
+    })
+    .then(data => {
+
+        const lista = normalizarRespuestaEspecialistas(data);
+
+        if (lista.length === 0) {
+            throw new Error("Lista vacía");
+        }
+
+        guardarEspecialistasEnCache(lista);
+        llenarSelectEspecialistas(lista);
+
+        console.log("✅ Especialistas cargados desde servidor");
+
+    })
+    .catch(error => {
+
+        console.error("❌ Error cargando especialistas:", error);
+
+        selectEspecialista.innerHTML =
+        '<option value="">-- No se pudieron cargar especialistas --</option>';
+
+        showErrorToast(
+            "No se pudo cargar la lista de especialistas. Verifique conexión.",
+            "Error de Conexión",
+            5000
+        );
+
+    });
+
+}
     // ===== EVENT LISTENERS PARA CAMPOS DE ENTRADA =====
     
     // Apellidos: filtrar solo letras y sincronizar nombre completo
@@ -767,40 +832,8 @@ document.addEventListener('DOMContentLoaded', () => {
     form.addEventListener('input', guardarBorradorConDebounce);
     form.addEventListener('change', guardarBorradorTemporal);
 
-    fetch(GAS_URL)
-        .then(response => {
-            if (!response.ok) throw new Error(`Error HTTP: ${response.status}.`);
-            return response.json();
-        })
-        .then(data => {
-            selectEspecialista.innerHTML = '<option value="">-- Seleccione Especialista --</option>';
+  }); 
 
-            if (data && data.error) {
-                console.error('Error del Servidor GAS:', data.error);
-                selectEspecialista.innerHTML = `<option value="">-- ERROR: ${data.error} --</option>`;
-                return;
-            }
-
-            if (data && Array.isArray(data)) {
-                data.forEach(especialista => {
-                    const option = document.createElement('option');
-                    option.value = especialista;
-                    option.textContent = especialista;
-                    selectEspecialista.appendChild(option);
-                });
-                if (borradorInicial && borradorInicial.especialista) {
-                    const existe = Array.from(selectEspecialista.options).some((opt) => opt.value === borradorInicial.especialista);
-                    if (existe) selectEspecialista.value = borradorInicial.especialista;
-                }
-            } else {
-                selectEspecialista.innerHTML = '<option value="">-- La lista de especialistas esta vacia --</option>';
-            }
-        })
-        .catch(error => {
-            console.error('Error FATAL cargando especialistas. Revise la consola del navegador y el Log de Apps Script.', error);
-            selectEspecialista.innerHTML = '<option value="">-- ERROR AL CARGAR LISTA (Ver consola) --</option>';
-        });
-});
 
 async function enviarEImprimir() {
     // Metodo principal: valida, registra en GAS, prepara impresion y lanza print.
@@ -818,7 +851,11 @@ async function enviarEImprimir() {
 
     if (codigoGuardado && ultimoRegistroImpreso && firmaActual === ultimaFirmaRegistrada) {
         announceLiveMessage('Este registro ya fue guardado. Use Reimprimir Cargo.', 'assertive');
-        alert('Este registro ya fue guardado. Use el boton "Reimprimir Cargo".');
+        showInfoToast(
+            'Este código ya fue registrado. Use el botón "Reimprimir Cargo" para imprimir nuevamente.',
+            'Registro ya Existe',
+            4500
+        );
         return;
     }
 
@@ -870,7 +907,11 @@ async function enviarEImprimir() {
             console.error('Error al registrar en Google Sheets:', result.error || result.message);
             hideLoading();
             announceLiveMessage('Ocurrio un error al registrar en Google Sheets.', 'assertive');
-            alert(`Error al registrar. Consulte la consola. Mensaje: ${result.error || result.message}`);
+            showErrorToast(
+                `Error al registrar: ${result.error || result.message}. Consulte la consola del navegador para más detalles.`,
+                'Error en Registro',
+                5000
+            );
             throw new Error(result.error || result.message);
         }
 
@@ -895,7 +936,23 @@ async function enviarEImprimir() {
         ultimaFirmaRegistrada = firmaActual;
         actualizarEstadoReimpresion(true);
         limpiarBorradorTemporal();
+        guardarRegistroEnHistorialLocal({
+            codigo: ultimoRegistroImpreso.codigo,
+            nombre: ultimoRegistroImpreso.nombre,
+            dni: ultimoRegistroImpreso.dni,
+            expediente: ultimoRegistroImpreso.expediente,
+            juzgado: ultimoRegistroImpreso.juzgado,
+            especialista: ultimoRegistroImpreso.especialista,
+            rolProcesal: ultimoRegistroImpreso.rolProcesal,
+            fechaRegistro: `${marcasTiempo.fechaRegistro} ${marcasTiempo.horaRegistro}`,
+            pdfFirmado: 'PENDIENTE'
+        });
         announceLiveMessage(`Registro completado. Codigo generado: ${codigo}.`);
+        showSuccessToast(
+            `Registro completado exitosamente. Código generado: ${codigo}`,
+            'Registro Exitoso',
+            4000
+        );
 
         updateLoading('🖨️ Preparando impresión...', 100);
 
@@ -904,12 +961,18 @@ async function enviarEImprimir() {
     } catch (error) {
         hideLoading();
         announceLiveMessage('Ocurrio un error grave al registrar los datos.', 'assertive');
-        alert('Ocurrio un error grave al registrar los datos. Por favor, revise la consola para mas detalles.');
+        showErrorToast(
+            'Ocurrió un error grave al registrar los datos. Por favor, revise la consola del navegador para más detalles.',
+            'Error Crítico',
+            5000
+        );
         console.error('Error en la funcion enviarEImprimir:', error);
-    } finally {
+     } finally {
         isSubmitting = false;
         setRegisteringState(false, originalText);
 
         if (fechaControl1) fechaControl1.value = '';
     }
-}
+
+} // ← cierra enviarEImprimir
+
