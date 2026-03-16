@@ -5,6 +5,8 @@
   "main": "tailwind.config.js",
   "scripts": {
     "build:css": "tailwindcss -i ./css/tailwind-input.css -o ./css/tailwind.css --minify",
+    "build:js": "terser js/busqueda_lectura.js -o js/busqueda_lectura.js --compress --mangle && terser js/registro_lectura.js -o js/registro_lectura.js --compress --mangle && terser js/toast-system.js -o js/toast-system.js --compress --mangle",
+    "build": "npm run build:css && npm run build:js",
     "watch:css": "tailwindcss -i ./css/tailwind-input.css -o ./css/tailwind.css --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -20,6 +22,7 @@
   },
   "homepage": "https://github.com/lnavarroto/registro-lectura-expedientes#readme",
   "devDependencies": {
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "terser": "^5.46.0"
   }
 }

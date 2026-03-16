@@ -2,12 +2,19 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbyBWRh9RciPTjqUxv-A8Azk
 const REGISTROS_LOCAL_KEY = 'registros_lectura_local_v1';
 const MAX_PDF_SIZE_MB = 10;
 const RESULTS_PER_PAGE = 10;
-const ADMIN_DELETE_PASSWORD = '76931166';
+// Hash SHA-256 de la clave de administrador (nunca almacenar contraseñas en texto plano)
+const ADMIN_DELETE_PASSWORD_HASH = '0c2e9895a4e67e0b44e19ef99ba353179edc2fa84bff680ec3e1a03c85067df2';
 
 let currentResults = [];
 let currentPage = 1;
 let isActionBusy = false;
 let actionProgressTimer = null;
+
+async function sha256(message) {
+    const msgBuffer = new TextEncoder().encode(message);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 function announce(message, mode = 'polite') {
     const id = mode === 'assertive' ? 'alertLiveRegion' : 'statusLiveRegion';
@@ -865,7 +872,8 @@ async function eliminarPdf(codigo) {
 
     const adminKey = await showAdminPasswordDialog();
     if (adminKey === null) return;
-    if (adminKey.trim() !== ADMIN_DELETE_PASSWORD) {
+    const inputHash = await sha256(adminKey.trim());
+    if (inputHash !== ADMIN_DELETE_PASSWORD_HASH) {
         showErrorToast(
             'La clave de administrador es incorrecta. El PDF no fue eliminado.',
             'Clave Incorrecta',
@@ -952,84 +960,101 @@ function openPdfPickerForCode(codigo) {
     input.click();
 }
 
-async function tryServerSearch(query) {
-
-    const url = `${GAS_URL}?action=buscar&q=${encodeURIComponent(query)}`;
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    if (Array.isArray(data)) return data;
-    if (data && Array.isArray(data.data)) return data.data;
-
-    throw new Error('Formato de respuesta no compatible para busqueda.');
-}
 
 async function tryServerList() {
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
 
     try {
+
         const url = `${GAS_URL}?action=listar`;
-        const response = await fetch(url, { signal: controller.signal });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const response = await fetch(url,{signal:controller.signal});
+
+        if(!response.ok) throw new Error(`HTTP ${response.status}`);
+
         const data = await response.json();
 
-        if (Array.isArray(data)) return data;
-        if (data && Array.isArray(data.data)) return data.data;
+        // aceptar varios formatos posibles
+        if(Array.isArray(data)) return data;
 
-        throw new Error('Formato de respuesta no compatible para listar.');
+        if(data && Array.isArray(data.data)) return data.data;
+
+        if(data && Array.isArray(data.registros)) return data.registros;
+
+        console.log("Respuesta servidor:",data);
+
+        throw new Error("Formato de respuesta no compatible para listar.");
+
     } finally {
+
         clearTimeout(timeout);
+
     }
+
 }
 
 async function cargarRegistrosIniciales() {
+
     setLoadingMessage('Cargando registros...');
     renderLoadingSkeleton(6);
     announce('Cargando registros');
 
     try {
-        // Usamos buscar vacio porque suele devolver el mapeo mas completo (incluido pdfFirmado).
-        const serverRecords = await tryServerSearch('');
+
+        const serverRecords = await tryServerList();
+
         renderResults(serverRecords);
         setLocalRecords(serverRecords);
+
         showInfoToast(
             `Se cargaron ${serverRecords.length} registros desde el servidor.`,
             'Carga Completada',
             3500
         );
+
         announce(`Se cargaron ${serverRecords.length} registros`);
+
     } catch (error) {
+
         const local = getLocalRecords();
         renderResults(local);
+
         if (local.length) {
+
             showWarningToast(
                 `El servidor no está disponible. Se muestran ${local.length} registro(s) almacenado(s) localmente.`,
                 'Usando Datos Locales',
                 4500
             );
+
             announce('Mostrando registros locales', 'assertive');
+
         } else {
+
             showErrorToast(
                 'No se pudo conectar al servidor y no hay datos guardados localmente.',
                 'Sin Datos Disponibles',
                 5000
             );
+
             announce('No hay registros para mostrar', 'assertive');
+
         }
+
         console.error('No fue posible cargar listado inicial desde servidor:', error);
+
     } finally {
+
         clearMessage();
+
     }
+
 }
 
 async function runSearch(query) {
+
     const form = document.getElementById('searchForm');
     const button = document.getElementById('searchButton');
     const clearButton = document.getElementById('clearSearchButton');
@@ -1037,47 +1062,37 @@ async function runSearch(query) {
     form.setAttribute('aria-busy', 'true');
     button.disabled = true;
     if (clearButton) clearButton.disabled = true;
+
     setLoadingMessage('Buscando registros...');
     renderLoadingSkeleton(4);
-    announce('Buscando registros');
 
     try {
-        const serverResults = await tryServerSearch(query);
-        renderResults(serverResults);
+
+        const local = getLocalRecords();
+
+        const resultados = local.filter(r => matchesQuery(r, query));
+
+        renderResults(resultados);
+
         showInfoToast(
-            `Se encontraron ${serverResults.length} resultado(s) en el servidor.`,
+            `Se encontraron ${resultados.length} resultado(s).`,
             'Búsqueda Completada',
             3500
         );
-        announce(`Se encontraron ${serverResults.length} resultados en servidor`);
-        return;
+
     } catch (error) {
-        const localResults = getLocalRecords().filter((r) => matchesQuery(r, query));
-        renderResults(localResults);
 
-        if (localResults.length) {
-            showWarningToast(
-                `El servidor no está disponible. Se muestran ${localResults.length} resultado(s) almacenado(s) localmente.`,
-                'Usando Datos Locales',
-                4500
-            );
-            announce(`Mostrando ${localResults.length} resultados locales`, 'assertive');
-        } else {
-            showErrorToast(
-                'No se encontraron resultados en el servidor ni en datos locales. Verifica tu búsqueda.',
-                'Sin Resultados',
-                5000
-            );
-            announce('No hay resultados disponibles', 'assertive');
-        }
+        console.error(error);
 
-        console.error('Busqueda servidor no disponible:', error);
     } finally {
+
         form.setAttribute('aria-busy', 'false');
         button.disabled = false;
         if (clearButton) clearButton.disabled = false;
         clearMessage();
+
     }
+
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1088,6 +1103,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const paginationContainer = document.getElementById('paginationContainer');
 
     cargarRegistrosIniciales();
+
+    const refreshBtn = document.getElementById('refreshTableBtn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            cargarRegistrosIniciales();
+        });
+    }
 
     form.addEventListener('submit', (event) => {
         event.preventDefault();

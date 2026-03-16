@@ -646,6 +646,10 @@ function limpiarCampos() {
     document.getElementById('codigo_lectura').value = '';
     document.getElementById('print-codigo').textContent = '';
 
+    document.getElementById('expediente').value = '';
+    document.getElementById('expediente-preview').textContent = '';
+    document.getElementById('expediente-guia').classList.add('hidden');
+
     document.getElementById('especialista').selectedIndex = 0;
 
     const tdResponsable = document.getElementById('responsable-1');
