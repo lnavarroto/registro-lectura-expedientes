@@ -2,19 +2,11 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbyBWRh9RciPTjqUxv-A8Azk
 const REGISTROS_LOCAL_KEY = 'registros_lectura_local_v1';
 const MAX_PDF_SIZE_MB = 10;
 const RESULTS_PER_PAGE = 10;
-// Hash SHA-256 de la clave de administrador (nunca almacenar contraseñas en texto plano)
-const ADMIN_DELETE_PASSWORD_HASH = '0c2e9895a4e67e0b44e19ef99ba353179edc2fa84bff680ec3e1a03c85067df2';
 
 let currentResults = [];
 let currentPage = 1;
 let isActionBusy = false;
 let actionProgressTimer = null;
-
-async function sha256(message) {
-    const msgBuffer = new TextEncoder().encode(message);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
 
 function announce(message, mode = 'polite') {
     const id = mode === 'assertive' ? 'alertLiveRegion' : 'statusLiveRegion';
@@ -872,14 +864,15 @@ async function eliminarPdf(codigo) {
 
     const adminKey = await showAdminPasswordDialog();
     if (adminKey === null) return;
-    const inputHash = await sha256(adminKey.trim());
-    if (inputHash !== ADMIN_DELETE_PASSWORD_HASH) {
+
+    const trimmedAdminKey = adminKey.trim();
+    if (!trimmedAdminKey) {
         showErrorToast(
-            'La clave de administrador es incorrecta. El PDF no fue eliminado.',
-            'Clave Incorrecta',
+            'Debe ingresar la clave de administrador para continuar.',
+            'Clave Requerida',
             5000
         );
-        announce('Clave de administrador incorrecta', 'assertive');
+        announce('Clave de administrador requerida', 'assertive');
         return;
     }
 
@@ -898,7 +891,8 @@ async function eliminarPdf(codigo) {
 
         const payload = new URLSearchParams({
             action: 'eliminar_pdf',
-            codigo: codigo
+            codigo: codigo,
+            password: trimmedAdminKey
         });
 
         const response = await fetch(GAS_URL, {
@@ -906,12 +900,17 @@ async function eliminarPdf(codigo) {
             body: payload
         });
 
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
         const data = await response.json();
 
         if (data.result === "success") {
             updateActionLoading('Actualizando registro local...', 90);
 
             updatePdfStatusOnCurrentResults(codigo, "PENDIENTE");
+            upsertPdfStatusLocal(codigo, 'PENDIENTE');
             renderCurrentPage();
             await finishActionProgress(`PDF eliminado para codigo ${codigo}`);
             animateDeletedStateTransition(codigo);
@@ -925,7 +924,7 @@ async function eliminarPdf(codigo) {
 
         } else {
 
-            throw new Error(data.error || "Error al eliminar PDF");
+            throw new Error(data.error || data.message || "Error al eliminar PDF");
 
         }
 
@@ -934,12 +933,34 @@ async function eliminarPdf(codigo) {
         console.error(error);
         await finishActionProgress(`No se pudo eliminar el PDF de ${codigo}`);
 
+        const normalizedError = (error && error.message ? error.message : '').toString().trim();
+        const isWrongPassword = /clave\s+incorrecta/i.test(normalizedError);
+        const isMissingPassword = /clave\s+requerida|password\s+required|required\s+password/i.test(normalizedError);
+
+        const toastMessage = isWrongPassword
+            ? 'La clave de administrador es incorrecta. El PDF no fue eliminado.'
+            : isMissingPassword
+                ? 'Debe ingresar la clave de administrador para continuar.'
+                : 'No se pudo eliminar el PDF. Por favor, intente nuevamente.';
+
+        const toastTitle = isWrongPassword
+            ? 'Clave Incorrecta'
+            : isMissingPassword
+                ? 'Clave Requerida'
+                : 'Error en Eliminación';
+
+        const announceMessage = isWrongPassword
+            ? 'Clave de administrador incorrecta'
+            : isMissingPassword
+                ? 'Clave de administrador requerida'
+                : 'Error eliminando PDF';
+
         showErrorToast(
-            'No se pudo eliminar el PDF. Por favor, intente nuevamente.',
-            'Error en Eliminación',
+            toastMessage,
+            toastTitle,
             5000
         );
-        announce("Error eliminando PDF", "assertive");
+        announce(announceMessage, 'assertive');
 
     } finally {
         lockInterface(false);
