@@ -199,6 +199,55 @@ function limpiarBorradorTemporal() {
     localStorage.removeItem(BORRADOR_REGISTRO_KEY);
 }
 
+function initializeHelpTooltips() {
+    const triggers = Array.from(document.querySelectorAll('.expediente-help-trigger'));
+    if (!triggers.length) return;
+
+    const closeAll = (exceptTrigger = null) => {
+        triggers.forEach((trigger) => {
+            if (exceptTrigger && trigger === exceptTrigger) return;
+            trigger.classList.remove('is-open');
+            trigger.setAttribute('aria-expanded', 'false');
+        });
+    };
+
+    triggers.forEach((trigger) => {
+        trigger.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            const shouldOpen = !trigger.classList.contains('is-open');
+            closeAll(trigger);
+
+            if (shouldOpen) {
+                trigger.classList.add('is-open');
+                trigger.setAttribute('aria-expanded', 'true');
+            } else {
+                trigger.classList.remove('is-open');
+                trigger.setAttribute('aria-expanded', 'false');
+            }
+        });
+    });
+
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            closeAll();
+            return;
+        }
+
+        if (!target.closest('.expediente-help-trigger')) {
+            closeAll();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeAll();
+        }
+    });
+}
+
 function aplicarValorSiExiste(id, value) {
     const element = document.getElementById(id);
     if (!element || value === undefined || value === null) return;
@@ -1028,6 +1077,8 @@ if (reprintButton) {
 reprintButton.addEventListener('click', reimprimirCargo);
 
 }
+
+initializeHelpTooltips();
 
 manejarOtroRol();
 

@@ -135,13 +135,45 @@
                            class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md">
                 </div>
                 <div class="flex items-center mb-4">
-                    <label for="dni" class="font-bold text-gray-700 w-48 flex-shrink-0">Número de DNI:</label>
+                    <div class="field-help-row font-bold text-gray-700 w-48 flex-shrink-0">
+                        <label for="dni">Número de DNI:</label>
+                        <button
+                            type="button"
+                            class="expediente-help-trigger"
+                            aria-label="Ver ayuda sobre el DNI"
+                            aria-expanded="false"
+                        >
+                            i
+                            <span class="expediente-help-tooltip" role="tooltip">
+                                <strong>Qué ingresar</strong>
+                                <span>Escriba solo 8 dígitos, sin espacios, guiones ni caracteres adicionales.</span>
+                                <strong>Recomendación</strong>
+                                <span>Use el DNI del usuario que realiza la lectura para evitar duplicidades en la búsqueda.</span>
+                            </span>
+                        </button>
+                    </div>
                     <input type="text" id="dni" name="DNI" placeholder="Ingrese 8 dígitos. Ej: 12345678" pattern="[0-9]{8}" title="Debe ser 8 dígitos numéricos" required
                            inputmode="numeric" maxlength="8"
                            class="w-full p-2 border border-gray-300 rounded-md focus:border-blue-500 focus:shadow-md">
                 </div>
                 <div class="mb-4">
-                    <label class="font-bold text-gray-700 block mb-3">📝 Número de Expediente:</label>
+                    <div class="expediente-label-row">
+                        <label class="font-bold text-gray-700 block mb-3">📝 Número de Expediente:</label>
+                        <button
+                            type="button"
+                            class="expediente-help-trigger"
+                            aria-label="Ver ayuda sobre el formato del expediente"
+                            aria-expanded="false"
+                        >
+                            i
+                            <span class="expediente-help-tooltip" role="tooltip">
+                                <strong>Formato esperado</strong>
+                                <span>00000-AAAA-CUADERNO-JUZGADO-MATERIA-01</span>
+                                <strong>Qué validar</strong>
+                                <span>Si no se muestra la vista previa, todavía falta completar información del expediente.</span>
+                            </span>
+                        </button>
+                    </div>
                     <div class="expediente-block bg-blue-50 border-2 border-blue-400 rounded-lg p-5 shadow-md">
                         <div class="flex flex-wrap gap-4 items-end">
                             <!-- NÚMERO -->
@@ -255,7 +287,23 @@
                 </div>
 
                 <div class="flex items-center mb-4">
-                    <label for="especialista" class="font-bold text-gray-700 w-48 flex-shrink-0">Especialista:</label>
+                    <div class="field-help-row font-bold text-gray-700 w-48 flex-shrink-0">
+                        <label for="especialista">Especialista:</label>
+                        <button
+                            type="button"
+                            class="expediente-help-trigger"
+                            aria-label="Ver ayuda sobre el especialista"
+                            aria-expanded="false"
+                        >
+                            i
+                            <span class="expediente-help-tooltip" role="tooltip">
+                                <strong>Qué elegir</strong>
+                                <span>Seleccione el especialista responsable del expediente según la lista cargada desde el sistema.</span>
+                                <strong>Si no aparece</strong>
+                                <span>Verifique conexión o actualice la lista; no conviene registrar con un especialista incorrecto.</span>
+                            </span>
+                        </button>
+                    </div>
                     <select id="especialista" name="Especialista" required
                              class="w-full p-2 border border-gray-300 rounded-md bg-white focus:border-blue-500 focus:shadow-md">
                         <option value="">-- Cargando Especialistas --</option>
@@ -263,7 +311,23 @@
                 </div>
 
                 <div class="flex items-center mb-4">
-                    <label for="parteProcesal" class="font-bold text-gray-700 w-48 flex-shrink-0">Rol Procesal:</label>
+                    <div class="field-help-row font-bold text-gray-700 w-48 flex-shrink-0">
+                        <label for="parteProcesal">Rol Procesal:</label>
+                        <button
+                            type="button"
+                            class="expediente-help-trigger"
+                            aria-label="Ver ayuda sobre el rol procesal"
+                            aria-expanded="false"
+                        >
+                            i
+                            <span class="expediente-help-tooltip" role="tooltip">
+                                <strong>Qué refleja</strong>
+                                <span>Indica la posición del usuario dentro del expediente al momento de la lectura.</span>
+                                <strong>Si eliges Otro</strong>
+                                <span>Debes completar el campo Especificar Rol para que el registro quede claro en la hoja y en la impresión.</span>
+                            </span>
+                        </button>
+                    </div>
                     <select id="parteProcesal" name="Rol_Procesal" required
                              class="w-full p-2 border border-gray-300 rounded-md bg-white focus:border-blue-500 focus:shadow-md">
                         <option value="">-- Seleccione un Rol --</option>
@@ -288,8 +352,22 @@
             <div class="border border-gray-300 p-5 mb-6 rounded-lg">
                 
                 <div class="flex justify-between items-center mb-6">
-                    <div class="text-2xl font-extrabold text-blue-700 px-3 py-1 bg-white rounded-lg shadow-md border-b-4 border-blue-400">
+                    <div class="text-2xl font-extrabold text-blue-700 px-3 py-1 bg-white rounded-lg shadow-md border-b-4 border-blue-400 flex items-center gap-2">
                         <span class="mr-2">📋</span> Control de Ingreso y Salida del Expediente
+                        <button
+                            type="button"
+                            class="expediente-help-trigger expediente-help-trigger-compact"
+                            aria-label="Ver ayuda sobre el control de ingreso y salida"
+                            aria-expanded="false"
+                        >
+                            i
+                            <span class="expediente-help-tooltip expediente-help-tooltip-wide" role="tooltip">
+                                <strong>Uso del bloque</strong>
+                                <span>Este cuadro acompaña la impresión del cargo y sirve para identificar responsable, fecha y observación del movimiento del expediente.</span>
+                                <strong>Responsable editable</strong>
+                                <span>Use el botón Editar Responsable si la persona a cargo cambia antes de imprimir.</span>
+                            </span>
+                        </button>
                     </div>
                     <button id="editButton" type="button" 
                         class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-lg transition duration-150 transform hover:scale-105">

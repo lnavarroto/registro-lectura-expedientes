@@ -109,6 +109,122 @@ html { font-family: sans-serif; }
 
 /* ===== ESTILOS MEJORADOS PARA BLOQUE DE EXPEDIENTES ===== */
 
+.expediente-label-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+}
+
+.field-help-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.field-help-row label {
+    margin: 0;
+}
+
+.expediente-label-row label {
+    margin-bottom: 0 !important;
+}
+
+.expediente-help-trigger {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 999px;
+    border: 1px solid #7dd3fc;
+    background: linear-gradient(135deg, #ffffff, #e0f2fe);
+    color: #0369a1;
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1;
+    cursor: help;
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.14);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.expediente-help-trigger:hover,
+.expediente-help-trigger:focus-visible {
+    transform: translateY(-1px);
+    border-color: #0284c7;
+    box-shadow: 0 8px 18px rgba(2, 132, 199, 0.2);
+    outline: none;
+}
+
+.expediente-help-tooltip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 0.75rem);
+    transform: translateX(-50%) translateY(6px);
+    width: min(320px, 82vw);
+    padding: 0.8rem 0.9rem;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.96);
+    color: #f8fafc;
+    font-size: 0.8rem;
+    line-height: 1.55;
+    text-align: left;
+    box-shadow: 0 16px 28px rgba(15, 23, 42, 0.28);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+    z-index: 20;
+}
+
+.expediente-help-tooltip::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+    border-width: 8px 7px 0 7px;
+    border-style: solid;
+    border-color: rgba(15, 23, 42, 0.96) transparent transparent transparent;
+}
+
+.expediente-help-tooltip strong {
+    display: block;
+    margin-bottom: 0.2rem;
+    color: #bae6fd;
+    font-size: 0.73rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.expediente-help-tooltip span {
+    display: block;
+}
+
+.expediente-help-tooltip span + strong {
+    margin-top: 0.7rem;
+}
+
+.expediente-help-trigger.is-open .expediente-help-tooltip,
+.expediente-help-trigger:hover .expediente-help-tooltip,
+.expediente-help-trigger:focus-visible .expediente-help-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.expediente-help-trigger-compact {
+    width: 1.65rem;
+    height: 1.65rem;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+
+.expediente-help-tooltip-wide {
+    width: min(360px, 86vw);
+}
+
 .expediente-block {
     background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
     border-left: 6px solid #0284c7 !important;
@@ -167,4 +283,24 @@ html { font-family: sans-serif; }
     color: #0c4a6e;
     font-size: 14px;
     letter-spacing: 1px;
+}
+
+@media (max-width: 640px) {
+    .expediente-help-tooltip {
+        left: auto;
+        right: -0.25rem;
+        transform: translateY(6px);
+    }
+
+    .expediente-help-tooltip::after {
+        left: auto;
+        right: 0.75rem;
+        transform: none;
+    }
+
+    .expediente-help-trigger.is-open .expediente-help-tooltip,
+    .expediente-help-trigger:hover .expediente-help-tooltip,
+    .expediente-help-trigger:focus-visible .expediente-help-tooltip {
+        transform: translateY(0);
+    }
 }

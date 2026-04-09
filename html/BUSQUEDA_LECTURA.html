@@ -103,6 +103,34 @@
         </header>
 
         <section class="p-6 border-b border-slate-200">
+            <details class="search-guide" open>
+                <summary class="search-guide-summary">
+                    <span class="search-guide-summary-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false">
+                            <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+                            <path d="M12 10.2v5.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                            <circle cx="12" cy="7.2" r="1.1" fill="currentColor"></circle>
+                        </svg>
+                    </span>
+                    <span class="search-guide-summary-text">Guía rápida de uso</span>
+                </summary>
+                <div class="search-guide-content">
+                    <div class="search-guide-grid">
+                        <article class="search-guide-card">
+                            <strong>Qué puedes buscar</strong>
+                            <p>Ingresa un código de atención o DNI.</p>
+                        </article>
+                        <article class="search-guide-card">
+                            <strong>Cómo funciona</strong>
+                            <p>La búsqueda revisa los registros cargados en esta sesión y muestra coincidencias parciales.</p>
+                        </article>
+                        <article class="search-guide-card">
+                            <strong>Si no aparece un resultado</strong>
+                            <p>Primero usa Actualizar tabla. Si el servidor no responde, se mostrarán los datos guardados localmente.</p>
+                        </article>
+                    </div>
+                </div>
+            </details>
             <form id="searchForm" class="grid gap-4 sm:grid-cols-[1fr_auto_auto]" aria-busy="false">
                 <label class="sr-only" for="searchInput">Termino de busqueda</label>
                 <input
